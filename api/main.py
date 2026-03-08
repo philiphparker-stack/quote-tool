@@ -5,7 +5,7 @@ import re
 from io import BytesIO
 from typing import List, Dict, Any, Optional, Tuple
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -27,8 +27,19 @@ WEB_ROOT = os.path.join(PROJECT_ROOT, "web")
 
 ITEMS_JSON = os.path.join(WEB_ROOT, "items.json")
 IMAGES_DIR = os.path.join(WEB_ROOT, "assets", "items")
-EMSER_LOGO_PATH = os.path.join(WEB_ROOT, "assets", "emserlogo.png")
+
+# Support both likely Emser logo locations
+EMSER_LOGO_CANDIDATES = [
+    os.path.join(WEB_ROOT, "assets", "emserlogo.png"),
+    os.path.join(WEB_ROOT, "assets", "items", "emserlogo.png"),
+]
+
 COMING_SOON_IMAGE = os.path.join(IMAGES_DIR, "comingsoon.png")
+
+# ============================================================
+# Security
+# ============================================================
+APP_PASSWORD = os.getenv("QUOTE_TOOL_PASSWORD", "sterlina")
 
 # ============================================================
 # App + CORS
@@ -48,6 +59,7 @@ app.add_middleware(
 # ============================================================
 class GenerateReq(BaseModel):
     program: str = "TEST"
+    customer_name: Optional[str] = None
     effective_date: Optional[str] = None
     price_mode: str = "direct"
     item_ids: List[str] = []
@@ -56,12 +68,21 @@ class GenerateReq(BaseModel):
 
 
 # ============================================================
-# Helpers: data loading
+# Helpers: auth
 # ============================================================
 def norm(s: Any) -> str:
     return str(s).strip() if s is not None else ""
 
 
+def require_password(request: Request):
+    supplied = norm(request.headers.get("X-Quote-Password"))
+    if supplied != APP_PASSWORD:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+# ============================================================
+# Helpers: data loading
+# ============================================================
 def load_items_list() -> List[Dict[str, Any]]:
     if not os.path.exists(ITEMS_JSON):
         return []
@@ -325,7 +346,7 @@ def decode_logo_data(customer_logo_data: Optional[str]) -> Optional[ImageReader]
             data = data.split(",", 1)[1]
         raw = base64.b64decode(data)
         img = Image.open(BytesIO(raw))
-        reader = compress_pil_to_reader(img, max_px=320, quality=60)
+        reader = compress_pil_to_reader(img, max_px=360, quality=65)
         LOGO_CACHE[key] = reader
         return reader
     except Exception:
@@ -333,7 +354,11 @@ def decode_logo_data(customer_logo_data: Optional[str]) -> Optional[ImageReader]
 
 
 def get_emser_logo_reader() -> Optional[ImageReader]:
-    return get_image_reader_from_path(EMSER_LOGO_PATH, max_px=320, quality=60)
+    for candidate in EMSER_LOGO_CANDIDATES:
+        reader = get_image_reader_from_path(candidate, max_px=360, quality=65)
+        if reader:
+            return reader
+    return None
 
 
 def resolve_item_image_path(image_value: str) -> str:
@@ -469,13 +494,32 @@ def fit_lines(
 # ============================================================
 # PDF layout helpers
 # ============================================================
+BRAND_BLUE = colors.HexColor("#0F3A6D")
+BRAND_BLUE_DARK = colors.HexColor("#0A2D55")
+BRAND_GOLD = colors.HexColor("#BC8644")
+SOFT_TEXT = colors.HexColor("#5F6B7A")
+LIGHT_LINE = colors.HexColor("#D6DCE5")
+
+
 def draw_placeholder_image(c: canvas.Canvas, x: float, y: float, w: float, h: float):
     c.setStrokeColor(colors.Color(0, 0, 0, alpha=0.18))
     c.setFillColor(colors.Color(0, 0, 0, alpha=0.04))
-    c.rect(x, y, w, h, stroke=1, fill=1)
+    c.roundRect(x, y, w, h, 5, stroke=1, fill=1)
     c.setStrokeColor(colors.Color(0, 0, 0, alpha=0.25))
-    c.line(x, y, x + w, y + h)
-    c.line(x, y + h, x + w, y)
+    c.line(x + 2, y + 2, x + w - 2, y + h - 2)
+    c.line(x + 2, y + h - 2, x + w - 2, y + 2)
+
+
+def draw_page_footer(c: canvas.Canvas, W: float, page_num: int):
+    footer_y = 20
+    c.setStrokeColor(colors.Color(0, 0, 0, alpha=0.14))
+    c.setLineWidth(0.6)
+    c.line(30, footer_y + 10, W - 30, footer_y + 10)
+
+    c.setFillColor(SOFT_TEXT)
+    c.setFont("Helvetica", 8.5)
+    c.drawString(30, footer_y, "Emser Tile  |  www.emser.com  |  For ordering contact your Emser representative")
+    c.drawRightString(W - 30, footer_y, f"Page {page_num}")
 
 
 def draw_header(
@@ -484,87 +528,83 @@ def draw_header(
     H: float,
     program: str,
     effective_date: str,
+    customer_name: str,
     customer_logo_reader: Optional[ImageReader] = None,
 ):
+    # top band
+    c.setFillColor(BRAND_BLUE)
+    c.rect(0, H - 20, W, 20, stroke=0, fill=1)
 
-    # ------------------------------------------------
-    # Emser logo (LEFT)
-    # ------------------------------------------------
-    emser_reader = get_image_reader_from_path(
-        EMSER_LOGO_PATH,
-        max_px=320,
-        quality=60
-    )
-
+    # Emser logo top-left
+    emser_reader = get_emser_logo_reader()
     if emser_reader:
         try:
             c.drawImage(
                 emser_reader,
                 30,
-                H - 55,
-                width=120,
-                height=38,
+                H - 74,
+                width=150,
+                height=44,
                 preserveAspectRatio=True,
                 mask="auto",
             )
         except Exception:
             pass
 
-    # ------------------------------------------------
-    # Customer logo (RIGHT)
-    # ------------------------------------------------
+    # customer logo top-right
     if customer_logo_reader:
         try:
             c.drawImage(
                 customer_logo_reader,
-                W - 150,
-                H - 55,
-                width=120,
-                height=38,
+                W - 170,
+                H - 72,
+                width=138,
+                height=42,
                 preserveAspectRatio=True,
                 mask="auto",
             )
         except Exception:
             pass
 
-    # ------------------------------------------------
-    # Title
-    # ------------------------------------------------
+    # title
+    c.setFillColor(BRAND_BLUE_DARK)
+    c.setFont("Helvetica-Bold", 18)
+    c.drawCentredString(W / 2, H - 38, "Local Market Stocking Program")
+
+    c.setFillColor(SOFT_TEXT)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawCentredString(W / 2, H - 52, "EMSER TILE")
+
+    # detail rows
+    left_x = 30
+    right_x = W - 30
+    row1_y = H - 96
+    row2_y = H - 111
+
+    c.setFont("Helvetica-Bold", 9.4)
     c.setFillColor(colors.black)
-    c.setFont("Helvetica-Bold", 16)
+    c.drawString(left_x, row1_y, f"Customer: {customer_name or '—'}")
 
-    title = "Local Market Stocking Program"
-    title_w = c.stringWidth(title, "Helvetica-Bold", 16)
+    c.drawRightString(right_x, row1_y, f"Program: {program or 'TEST'}")
+    c.drawRightString(right_x, row2_y, f"Effective Date: {effective_date or '—'}")
 
-    c.drawString((W / 2) - (title_w / 2), H - 28, title)
+    divider_y = H - 132
+    c.setStrokeColor(colors.Color(0, 0, 0, alpha=0.18))
+    c.setLineWidth(0.9)
+    c.line(30, divider_y, W - 30, divider_y)
 
-    # ------------------------------------------------
-    # Program / Date line
-    # ------------------------------------------------
-    c.setFont("Helvetica", 11)
-
-    subtitle = f"Program: {program}  |  Effective Date: {effective_date}"
-    sub_w = c.stringWidth(subtitle, "Helvetica", 11)
-
-    c.drawString((W / 2) - (sub_w / 2), H - 45, subtitle)
-
-    # ------------------------------------------------
-    # Divider line
-    # ------------------------------------------------
-    c.setStrokeColor(colors.Color(0, 0, 0, alpha=0.2))
-    c.setLineWidth(1)
-    c.line(30, H - 68, W - 30, H - 68)
+    return divider_y
 
 
 def draw_category_header(c: canvas.Canvas, x: float, y_top: float, width: float, label: str):
-    header_h = 16
-    c.setFillColor(colors.Color(0.92, 0.92, 0.92))
-    c.setStrokeColor(colors.Color(0, 0, 0, alpha=0.12))
-    c.roundRect(x, y_top - header_h, width, header_h, 5, stroke=1, fill=1)
+    header_h = 18
+    c.setFillColor(BRAND_GOLD)
+    c.setStrokeColor(BRAND_GOLD)
+    c.roundRect(x, y_top - header_h, width, header_h, 6, stroke=1, fill=1)
 
-    c.setFillColor(colors.black)
-    c.setFont("Helvetica-Bold", 10.2)
-    c.drawString(x + 9, y_top - 11.2, label)
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(x + 10, y_top - 11.8, label)
     return header_h
 
 
@@ -577,48 +617,56 @@ def draw_card(
     it: Dict[str, Any],
     mode: str,
 ):
-    c.setStrokeColor(colors.Color(0, 0, 0, alpha=0.18))
+    # shadow
+    c.setFillColor(colors.Color(0, 0, 0, alpha=0.05))
+    c.roundRect(x + 1.6, y_top - card_h - 1.6, card_w, card_h, 9, stroke=0, fill=1)
+
+    # card
+    c.setStrokeColor(colors.Color(0, 0, 0, alpha=0.16))
     c.setFillColor(colors.white)
-    c.roundRect(x, y_top - card_h, card_w, card_h, 8, stroke=1, fill=1)
+    c.roundRect(x, y_top - card_h, card_w, card_h, 9, stroke=1, fill=1)
 
-    pad = 6
-    price_col_w = 42
-    text_area_w = card_w - (pad * 2) - price_col_w - 4
+    pad = 8
+    price_col_w = 56
+    text_area_w = card_w - (pad * 2) - price_col_w - 6
 
+    # title
     title_lines, title_size = fit_lines(
         c,
         norm(it.get("name")),
         text_area_w,
         "Helvetica-Bold",
         max_lines=2,
-        start_size=7.4,
-        min_size=5.4,
+        start_size=8.5,
+        min_size=6.1,
     )
 
-    title_y = y_top - 12
-    c.setFillColor(colors.black)
+    title_y = y_top - 13
+    c.setFillColor(BRAND_BLUE_DARK)
     c.setFont("Helvetica-Bold", title_size)
     for i, line in enumerate(title_lines[:2]):
-        c.drawString(x + pad, title_y - (i * (title_size + 1.2)), line)
+        c.drawString(x + pad, title_y - (i * (title_size + 1.6)), line)
 
+    # price
     price_txt, price_size = fit_one_line(
         c,
         fmt_price(it, mode),
         price_col_w,
         "Helvetica-Bold",
-        start_size=8.2,
-        min_size=5.7,
+        start_size=9.6,
+        min_size=6.4,
     )
     c.setFont("Helvetica-Bold", price_size)
     c.setFillColor(colors.black)
-    c.drawRightString(x + card_w - pad, y_top - 13, price_txt)
+    c.drawRightString(x + card_w - pad, y_top - 14, price_txt)
 
-    img_size = 28
+    # lower content region
+    img_size = 36
     img_x = x + pad
-    img_y = y_top - card_h + 8
+    img_y = y_top - card_h + 12
 
     img_path = resolve_item_image_path(norm(it.get("image")))
-    img_reader = get_image_reader_from_path(img_path, max_px=140, quality=50) if img_path else None
+    img_reader = get_image_reader_from_path(img_path, max_px=180, quality=55) if img_path else None
 
     if img_reader:
         try:
@@ -637,9 +685,11 @@ def draw_card(
     else:
         draw_placeholder_image(c, img_x, img_y, img_size, img_size)
 
-    meta_x = img_x + img_size + 5
+    # bottom-left aligned text block
+    meta_x = img_x + img_size + 8
     meta_w = card_w - (meta_x - x) - pad
-    meta_top_y = img_y + img_size - 1
+    manufacturer_y = img_y + 20
+    sku_y = img_y + 5
 
     mfr_lines, mfr_size = fit_lines(
         c,
@@ -647,13 +697,13 @@ def draw_card(
         meta_w,
         "Helvetica",
         max_lines=2,
-        start_size=5.8,
-        min_size=4.6,
+        start_size=6.0,
+        min_size=4.8,
     )
-    c.setFillColor(colors.Color(0, 0, 0, alpha=0.72))
+    c.setFillColor(SOFT_TEXT)
     c.setFont("Helvetica", mfr_size)
     for i, line in enumerate(mfr_lines[:2]):
-        c.drawString(meta_x, meta_top_y - (i * (mfr_size + 1.0)), line)
+        c.drawString(meta_x, manufacturer_y - (i * (mfr_size + 1.2)), line)
 
     sku_txt, sku_size = fit_one_line(
         c,
@@ -663,9 +713,9 @@ def draw_card(
         start_size=5.8,
         min_size=4.8,
     )
-    c.setFillColor(colors.Color(0, 0, 0, alpha=0.55))
+    c.setFillColor(colors.Color(0, 0, 0, alpha=0.58))
     c.setFont("Helvetica", sku_size)
-    c.drawString(meta_x, img_y + 2, sku_txt)
+    c.drawString(meta_x, sku_y, sku_txt)
 
 
 def group_items_for_pdf(items: List[Dict[str, Any]]) -> List[Tuple[str, List[Dict[str, Any]]]]:
@@ -693,6 +743,7 @@ def build_pdf(
     mode: str,
     customer_logo_data: Optional[str] = None,
     program: str = "TEST",
+    customer_name: str = "",
     effective_date: str = "",
 ) -> bytes:
     buf = BytesIO()
@@ -702,50 +753,54 @@ def build_pdf(
     cols = 4
     left = 30
     right = 30
-    top_margin = 76
-    bottom = 36
-    gutter = 7
-    row_gap = 7
+    bottom = 34
+    gutter = 8
+    row_gap = 9
 
     usable_w = W - left - right
     card_w = (usable_w - gutter * (cols - 1)) / cols
-    card_h = 72
+    card_h = 82
 
     customer_logo_reader = decode_logo_data(customer_logo_data)
+    page_num = 1
 
-    draw_header(
+    header_divider_y = draw_header(
         c,
         W,
         H,
         program=program,
         effective_date=effective_date,
+        customer_name=customer_name,
         customer_logo_reader=customer_logo_reader,
     )
-    y = H - top_margin
+    y = header_divider_y - 10
 
     groups = group_items_for_pdf(items)
 
     def new_page():
-        nonlocal y
+        nonlocal y, page_num, header_divider_y
+        draw_page_footer(c, W, page_num)
         c.showPage()
-        draw_header(
+        page_num += 1
+        header_divider_y = draw_header(
             c,
             W,
             H,
             program=program,
             effective_date=effective_date,
+            customer_name=customer_name,
             customer_logo_reader=customer_logo_reader,
         )
-        y = H - top_margin
+        y = header_divider_y - 10
 
     for cat_key, cat_items in groups:
         label = pretty_category(cat_key)
 
-        if y - 18 < bottom:
+        if y - 22 < bottom:
             new_page()
 
         header_h = draw_category_header(c, left, y, usable_w, label)
-        y -= (header_h + 6)
+        y -= (header_h + 8)
 
         x = left
         col = 0
@@ -754,7 +809,7 @@ def build_pdf(
             if col == 0 and (y - card_h) < bottom:
                 new_page()
                 header_h = draw_category_header(c, left, y, usable_w, label + " (cont.)")
-                y -= (header_h + 6)
+                y -= (header_h + 8)
 
             draw_card(c, x, y, card_w, card_h, it, mode)
 
@@ -769,7 +824,9 @@ def build_pdf(
         if col != 0:
             y -= (card_h + row_gap)
         else:
-            y -= 2
+            y -= 4
+
+    draw_page_footer(c, W, page_num)
 
     c.save()
     pdf = buf.getvalue()
@@ -782,19 +839,24 @@ def build_pdf(
 # ============================================================
 @app.get("/health")
 def health():
+    emser_logo_found = any(os.path.exists(p) for p in EMSER_LOGO_CANDIDATES)
     return {
         "ok": True,
         "items_json_path": ITEMS_JSON,
         "items_json_exists": os.path.exists(ITEMS_JSON),
         "images_dir_path": IMAGES_DIR,
         "images_dir_exists": os.path.exists(IMAGES_DIR),
-        "emser_logo_exists": os.path.exists(EMSER_LOGO_PATH),
+        "emser_logo_candidates": EMSER_LOGO_CANDIDATES,
+        "emser_logo_found": emser_logo_found,
         "coming_soon_exists": os.path.exists(COMING_SOON_IMAGE),
+        "password_protected": True,
     }
 
 
 @app.get("/filters")
-def get_filters(manufacturer: Optional[str] = Query(default=None)):
+def get_filters(request: Request, manufacturer: Optional[str] = Query(default=None)):
+    require_password(request)
+
     items = load_items_list()
     if not items:
         return {"manufacturers": [], "categories": [], "categories_by_manufacturer": {}}
@@ -813,11 +875,14 @@ def get_filters(manufacturer: Optional[str] = Query(default=None)):
 
 @app.get("/items")
 def get_items(
+    request: Request,
     manufacturer: Optional[str] = Query(default=None),
     category: Optional[str] = Query(default=None),
     q: Optional[str] = Query(default=None),
     limit: int = Query(default=300, ge=1, le=2000),
 ):
+    require_password(request)
+
     items = load_items_list()
     if not items:
         return {"items": []}
@@ -833,7 +898,9 @@ def get_items(
 
 
 @app.post("/generate")
-def generate(req: GenerateReq):
+def generate(request: Request, req: GenerateReq):
+    require_password(request)
+
     mode = norm(req.price_mode).lower()
     if mode not in ("direct", "oow"):
         raise HTTPException(status_code=400, detail="price_mode must be 'direct' or 'oow'")
@@ -865,6 +932,7 @@ def generate(req: GenerateReq):
         mode=mode,
         customer_logo_data=req.customer_logo_data,
         program=norm(req.program) or "TEST",
+        customer_name=norm(req.customer_name),
         effective_date=norm(req.effective_date),
     )
 
@@ -874,7 +942,8 @@ def generate(req: GenerateReq):
         headers={"Content-Disposition": 'attachment; filename="quote.pdf"'},
     )
 
-    # ============================================================
+
+# ============================================================
 # Serve frontend
 # ============================================================
 app.mount("/assets", StaticFiles(directory=os.path.join(WEB_ROOT, "assets")), name="assets")

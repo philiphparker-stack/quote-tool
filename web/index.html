@@ -6,13 +6,18 @@
   <title>Quote Tool</title>
   <style>
     :root{
-      --bg:#f7f7f7;
+      --bg:#f4f6f8;
       --panel:#ffffff;
-      --line:#dddddd;
+      --line:#d8dee6;
       --text:#111111;
-      --muted:#666666;
-      --soft:#f0f0f0;
+      --muted:#667085;
+      --soft:#f7f9fc;
       --selected:#eaf4ff;
+      --shadow:0 12px 32px rgba(16,24,40,.08);
+      --brand:#0f3a6d;
+      --brand-dark:#0a2d55;
+      --brand-soft:#edf3fb;
+      --gold:#bc8644;
     }
 
     *{ box-sizing:border-box; }
@@ -20,32 +25,128 @@
     body{
       margin:0;
       font-family: Arial, Helvetica, sans-serif;
-      background:var(--bg);
+      background:linear-gradient(180deg, #f5f7fa 0%, #eef2f6 100%);
       color:var(--text);
     }
 
+    .authScreen{
+      position:fixed;
+      inset:0;
+      background:linear-gradient(180deg, rgba(245,247,250,.96) 0%, rgba(236,240,245,.98) 100%);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:9999;
+      padding:24px;
+    }
+
+    .authCard{
+      width:100%;
+      max-width:430px;
+      background:#fff;
+      border:1px solid #d8dee6;
+      border-radius:22px;
+      box-shadow:var(--shadow);
+      padding:30px 24px 24px;
+    }
+
+    .authTitle{
+      margin:0 0 6px;
+      font-size:30px;
+      line-height:1.04;
+      font-weight:900;
+      color:var(--brand-dark);
+    }
+
+    .authSub{
+      margin:0 0 18px;
+      font-size:14px;
+      color:var(--muted);
+      line-height:1.45;
+    }
+
+    .authField label{
+      display:block;
+      font-size:12px;
+      font-weight:800;
+      margin:0 0 6px;
+      color:#1d2939;
+    }
+
+    .authField input{
+      width:100%;
+      height:48px;
+      border:1px solid #cfd6df;
+      border-radius:15px;
+      background:#fff;
+      padding:0 15px;
+      font-size:15px;
+      outline:none;
+    }
+
+    .authField input:focus{
+      border-color:#9db3cf;
+      box-shadow:0 0 0 4px rgba(15,58,109,.08);
+    }
+
+    .authActions{
+      display:flex;
+      gap:10px;
+      margin-top:16px;
+      align-items:center;
+    }
+
+    .authError{
+      min-height:18px;
+      margin-top:10px;
+      font-size:12px;
+      color:#b42318;
+      font-weight:700;
+    }
+
     .page{
-      max-width:1500px;
+      max-width:1540px;
       margin:0 auto;
-      padding:16px 20px 20px;
+      padding:18px 20px 24px;
+    }
+
+    .hero{
+      background:linear-gradient(135deg, var(--brand-dark) 0%, var(--brand) 100%);
+      color:#fff;
+      border-radius:22px;
+      padding:22px 22px 18px;
+      box-shadow:var(--shadow);
+      margin-bottom:16px;
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .topBar{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      flex-wrap:wrap;
     }
 
     h1{
       margin:0 0 4px;
-      font-size:24px;
-      line-height:1.1;
+      font-size:30px;
+      line-height:1.04;
+      color:#fff;
     }
 
     .sub{
-      margin:0 0 14px;
-      color:var(--muted);
+      margin:0;
+      color:rgba(255,255,255,.84);
       font-size:14px;
+      line-height:1.45;
+      max-width:760px;
     }
 
     .topWrap{
       display:grid;
       grid-template-columns: 1.08fr 0.92fr;
-      gap:14px;
+      gap:16px;
       align-items:start;
       margin-bottom:14px;
     }
@@ -53,23 +154,24 @@
     .panel{
       background:var(--panel);
       border:1px solid var(--line);
-      border-radius:16px;
-      padding:12px 14px;
+      border-radius:18px;
+      padding:14px 15px;
+      box-shadow:var(--shadow);
     }
 
     .panelTitle{
       font-size:13px;
-      font-weight:800;
+      font-weight:900;
       text-transform:uppercase;
-      letter-spacing:.04em;
-      color:#222;
+      letter-spacing:.05em;
+      color:var(--brand-dark);
       margin:0 0 8px;
     }
 
     .panelSub{
       font-size:12px;
       color:var(--muted);
-      margin:0 0 10px;
+      margin:0 0 12px;
     }
 
     .formGrid{
@@ -82,7 +184,7 @@
     }
 
     .pdfTopGrid{
-      grid-template-columns: 130px 160px 150px;
+      grid-template-columns: repeat(4, minmax(150px, 1fr));
     }
 
     .pdfBottomRow{
@@ -96,51 +198,55 @@
     .field label{
       display:block;
       font-size:12px;
-      font-weight:700;
+      font-weight:800;
       margin:0 0 5px;
+      color:#1d2939;
     }
 
     .field input,
     .field select{
       width:100%;
-      height:36px;
-      border:1px solid #cfcfcf;
-      border-radius:12px;
+      border:1px solid #cfd6df;
+      border-radius:13px;
       background:#fff;
       padding:0 12px;
       font-size:14px;
       outline:none;
+      color:#111;
+      height:38px;
     }
 
     .field input:focus,
     .field select:focus{
-      border-color:#999;
+      border-color:#9db3cf;
+      box-shadow:0 0 0 4px rgba(15,58,109,.08);
     }
 
     input[type="file"]{
-      padding:6px 8px;
-      height:36px;
+      padding:7px 8px;
+      height:38px;
     }
 
     .logoPreviewWrap label{
       display:block;
       font-size:12px;
-      font-weight:700;
+      font-weight:800;
       margin:0 0 5px;
+      color:#1d2939;
     }
 
     .logoPreview{
       width:86px;
-      height:36px;
-      border:1px dashed #bdbdbd;
-      border-radius:10px;
+      height:38px;
+      border:1px dashed #b9c3d1;
+      border-radius:11px;
       display:flex;
       align-items:center;
       justify-content:center;
       overflow:hidden;
-      background:#fafafa;
+      background:#fafcff;
       font-size:11px;
-      color:#666;
+      color:#667085;
     }
 
     .logoPreview img{
@@ -157,20 +263,21 @@
     }
 
     button{
-      height:36px;
-      border-radius:12px;
-      border:1px solid #111;
+      height:38px;
+      border-radius:13px;
+      border:1px solid #101828;
       background:#fff;
       color:#111;
       padding:0 16px;
       font-size:14px;
-      font-weight:800;
+      font-weight:900;
       cursor:pointer;
       white-space:nowrap;
     }
 
     button.primary{
-      background:#111;
+      background:var(--brand-dark);
+      border-color:var(--brand-dark);
       color:#fff;
     }
 
@@ -178,18 +285,23 @@
       opacity:.96;
     }
 
+    button:disabled{
+      opacity:.65;
+      cursor:not-allowed;
+    }
+
     .statusBar{
       display:flex;
       justify-content:space-between;
       align-items:center;
       gap:12px;
-      padding:10px 2px 12px;
-      border-bottom:1px solid var(--line);
+      padding:12px 2px 14px;
       margin-bottom:14px;
       flex-wrap:wrap;
     }
 
-    .statusLeft{
+    .statusLeft,
+    .statusRight{
       display:flex;
       gap:10px;
       align-items:center;
@@ -197,40 +309,55 @@
     }
 
     .pill{
-      background:#ececec;
+      background:#e9eef5;
+      border:1px solid #d7e0ec;
       border-radius:999px;
-      padding:6px 11px;
+      padding:7px 12px;
       font-size:13px;
-      color:#444;
+      color:#344054;
+      font-weight:700;
+    }
+
+    .pill.authUnlocked{
+      background:#ecfdf3;
+      border-color:#cdebd8;
+      color:#027a48;
     }
 
     .productsGrid{
       display:grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap:10px;
+      gap:12px;
     }
 
     .itemCard{
       background:#fff;
-      border:1px solid #d9d9d9;
-      border-radius:14px;
-      padding:10px;
+      border:1px solid #d8dee6;
+      border-radius:16px;
+      padding:12px;
       display:grid;
-      grid-template-columns: 24px 54px minmax(0, 1fr);
-      gap:10px;
+      grid-template-columns: 24px 64px minmax(0, 1fr);
+      gap:12px;
       align-items:start;
-      min-height:96px;
+      min-height:112px;
       cursor:pointer;
+      box-shadow:0 6px 18px rgba(16,24,40,.04);
+      transition:transform .08s ease, box-shadow .08s ease, border-color .08s ease;
+    }
+
+    .itemCard:hover{
+      transform:translateY(-1px);
+      box-shadow:0 10px 22px rgba(16,24,40,.07);
     }
 
     .itemCard.selected{
       background:var(--selected);
       border-color:#9cc7ff;
-      box-shadow:0 0 0 1px #cfe4ff inset;
+      box-shadow:0 0 0 1px #cfe4ff inset, 0 10px 22px rgba(16,24,40,.07);
     }
 
     .checkWrap{
-      padding-top:1px;
+      padding-top:2px;
     }
 
     .checkWrap input{
@@ -240,11 +367,11 @@
     }
 
     .thumb{
-      width:54px;
-      height:54px;
-      border-radius:10px;
-      background:#fafafa;
-      border:1px solid #ececec;
+      width:64px;
+      height:64px;
+      border-radius:12px;
+      background:#fafcff;
+      border:1px solid #e7edf4;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -286,24 +413,26 @@
     }
 
     .itemName{
-      font-size:13px;
-      font-weight:800;
-      line-height:1.05;
-      margin:0 0 4px;
+      font-size:14px;
+      font-weight:900;
+      line-height:1.08;
+      margin:0 0 5px;
       word-break:break-word;
+      color:var(--brand-dark);
     }
 
     .itemMeta{
       font-size:11px;
-      color:#555;
+      color:#667085;
       margin:0 0 2px;
       word-break:break-word;
     }
 
     .itemPrice{
-      font-size:12px;
-      font-weight:800;
-      margin:5px 0 6px;
+      font-size:13px;
+      font-weight:900;
+      margin:7px 0 7px;
+      color:#101828;
     }
 
     .overrideRow{
@@ -316,31 +445,32 @@
 
     .overrideRow label{
       font-size:11px;
-      font-weight:700;
-      color:#444;
+      font-weight:800;
+      color:#475467;
     }
 
     .overrideRow input{
-      width:86px;
-      height:26px;
-      border:1px solid #cfcfcf;
-      border-radius:8px;
+      width:92px;
+      height:28px;
+      border:1px solid #cfd6df;
+      border-radius:9px;
       padding:0 8px;
       font-size:12px;
     }
 
     .empty{
       background:#fff;
-      border:1px dashed #cfcfcf;
-      border-radius:16px;
-      padding:28px;
+      border:1px dashed #cfd6df;
+      border-radius:18px;
+      padding:32px;
       text-align:center;
-      color:#666;
+      color:#667085;
+      box-shadow:var(--shadow);
     }
 
     .smallNote{
       font-size:12px;
-      color:#777;
+      color:var(--muted);
       margin-top:6px;
     }
 
@@ -353,13 +483,10 @@
       }
     }
 
-    @media (max-width: 980px){
+    @media (max-width: 1040px){
       .filtersGrid,
       .pdfTopGrid{
         grid-template-columns:1fr 1fr;
-      }
-      .pdfBottomRow{
-        grid-template-columns:1fr 86px;
       }
       .productsGrid{
         grid-template-columns:repeat(2, minmax(0, 1fr));
@@ -376,15 +503,45 @@
         grid-template-columns:1fr;
       }
       .itemCard{
-        grid-template-columns:22px 50px minmax(0, 1fr);
+        grid-template-columns:22px 58px minmax(0, 1fr);
+      }
+      .topBar{
+        flex-direction:column;
       }
     }
   </style>
 </head>
 <body>
+  <div class="authScreen" id="authScreen">
+    <div class="authCard">
+      <h2 class="authTitle">Quote Tool</h2>
+      <p class="authSub">Enter the access password to continue.</p>
+
+      <div class="authField">
+        <label for="passwordInput">Password</label>
+        <input id="passwordInput" type="password" placeholder="Enter password" />
+      </div>
+
+      <div class="authActions">
+        <button id="loginBtn" class="primary" type="button">Enter</button>
+      </div>
+
+      <div class="authError" id="authError"></div>
+    </div>
+  </div>
+
   <div class="page">
-    <h1>Quote Tool</h1>
-    <p class="sub">Find products on the left, then build the PDF quote settings on the right.</p>
+    <div class="hero">
+      <div class="topBar">
+        <div>
+          <h1>Quote Tool</h1>
+          <p class="sub">Build a polished customer-facing stocking program PDF with product images, pricing, program details, and customer branding.</p>
+        </div>
+        <div class="btnInline">
+          <button id="logoutBtn" type="button">Log Out</button>
+        </div>
+      </div>
+    </div>
 
     <div class="topWrap">
       <section class="panel">
@@ -423,11 +580,8 @@
 
         <div class="formGrid pdfTopGrid">
           <div class="field">
-            <label for="priceMode">Price Mode</label>
-            <select id="priceMode">
-              <option value="direct">Direct</option>
-              <option value="oow">OOW</option>
-            </select>
+            <label for="customerName">Customer Name</label>
+            <input id="customerName" type="text" placeholder="Ex: ABC Tile Supply" />
           </div>
 
           <div class="field">
@@ -438,6 +592,14 @@
           <div class="field">
             <label for="effectiveDate">Effective Date</label>
             <input id="effectiveDate" type="date" />
+          </div>
+
+          <div class="field">
+            <label for="priceMode">Price Mode</label>
+            <select id="priceMode">
+              <option value="direct">Direct</option>
+              <option value="oow">OOW</option>
+            </select>
           </div>
         </div>
 
@@ -472,21 +634,33 @@
         <div id="showingCount">Showing 0 items</div>
         <div class="pill" id="selectedCount">Selected: 0</div>
       </div>
+      <div class="statusRight">
+        <div class="pill" id="authStatus">Locked</div>
+      </div>
     </div>
 
     <div id="itemsWrap">
-      <div class="empty">Loading products...</div>
+      <div class="empty">Enter password to load products.</div>
     </div>
   </div>
 
   <script>
     const API_BASE = "";
     const COMING_SOON_SRC = "assets/items/comingsoon.png";
+    const PASSWORD_STORAGE_KEY = "quote_tool_password";
+
+    const authScreenEl = document.getElementById("authScreen");
+    const passwordInputEl = document.getElementById("passwordInput");
+    const loginBtn = document.getElementById("loginBtn");
+    const authErrorEl = document.getElementById("authError");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const authStatusEl = document.getElementById("authStatus");
 
     const manufacturerEl = document.getElementById("manufacturer");
     const categoryEl = document.getElementById("category");
     const searchEl = document.getElementById("search");
 
+    const customerNameEl = document.getElementById("customerName");
     const priceModeEl = document.getElementById("priceMode");
     const programNameEl = document.getElementById("programName");
     const effectiveDateEl = document.getElementById("effectiveDate");
@@ -517,6 +691,57 @@
         .replaceAll("'", "&#039;");
     }
 
+    function getSavedPassword() {
+      return localStorage.getItem(PASSWORD_STORAGE_KEY) || "";
+    }
+
+    function setSavedPassword(password) {
+      localStorage.setItem(PASSWORD_STORAGE_KEY, password);
+    }
+
+    function clearSavedPassword() {
+      localStorage.removeItem(PASSWORD_STORAGE_KEY);
+    }
+
+    function getAuthHeaders(extra = {}) {
+      const password = getSavedPassword();
+      return {
+        ...extra,
+        "X-Quote-Password": password
+      };
+    }
+
+    async function apiFetch(url, options = {}) {
+      const merged = {
+        ...options,
+        headers: getAuthHeaders(options.headers || {})
+      };
+
+      const res = await fetch(url, merged);
+
+      if (res.status === 401) {
+        showAuthScreen("Incorrect password.");
+        throw new Error("Unauthorized");
+      }
+
+      return res;
+    }
+
+    function showAuthScreen(message = "") {
+      authScreenEl.style.display = "flex";
+      authErrorEl.textContent = message;
+      authStatusEl.textContent = "Locked";
+      authStatusEl.classList.remove("authUnlocked");
+      passwordInputEl.focus();
+    }
+
+    function hideAuthScreen() {
+      authScreenEl.style.display = "none";
+      authErrorEl.textContent = "";
+      authStatusEl.textContent = "Unlocked";
+      authStatusEl.classList.add("authUnlocked");
+    }
+
     function fmtPrice(item, mode) {
       const raw = mode === "direct" ? item.price_direct : item.price_oow;
       if (raw === null || raw === undefined || raw === "") return "";
@@ -535,7 +760,7 @@
     }
 
     async function fetchFilters() {
-      const res = await fetch(`${API_BASE}/filters`);
+      const res = await apiFetch(`${API_BASE}/filters`);
       if (!res.ok) throw new Error("Failed to load filters");
       allFilters = await res.json();
 
@@ -578,7 +803,7 @@
 
       itemsWrapEl.innerHTML = `<div class="empty">Loading products...</div>`;
 
-      const res = await fetch(`${API_BASE}/items?${params.toString()}`);
+      const res = await apiFetch(`${API_BASE}/items?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load items");
 
       const data = await res.json();
@@ -683,70 +908,97 @@
     }
 
     async function handleGenerate() {
-  if (!selectedIds.size) {
-    alert("Select at least one item first.");
-    return;
-  }
+      if (!selectedIds.size) {
+        alert("Select at least one item first.");
+        return;
+      }
 
-  generateBtn.disabled = true;
-  generateBtn.textContent = "Generating...";
+      generateBtn.disabled = true;
+      generateBtn.textContent = "Generating...";
 
-  try {
-    const payload = {
-      program: programNameEl.value.trim() || "TEST",
-      effective_date: effectiveDateEl.value || "",
-      price_mode: priceModeEl.value,
-      item_ids: Array.from(selectedIds),
-      customer_logo_data: customerLogoData,
-      price_overrides: priceOverrides
-    };
+      try {
+        const payload = {
+          customer_name: customerNameEl.value.trim(),
+          program: programNameEl.value.trim() || "TEST",
+          effective_date: effectiveDateEl.value || "",
+          price_mode: priceModeEl.value,
+          item_ids: Array.from(selectedIds),
+          customer_logo_data: customerLogoData,
+          price_overrides: priceOverrides
+        };
 
-    const res = await fetch(`${API_BASE}/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+        const res = await apiFetch(`${API_BASE}/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
 
-    if (!res.ok) {
-      const txt = await res.text();
-      console.error("PDF generate error:", txt);
-      alert(txt || "PDF generation failed");
-      return;
+        if (!res.ok) {
+          const txt = await res.text();
+          console.error("PDF generate error:", txt);
+          alert(txt || "PDF generation failed");
+          return;
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "quote.pdf";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+      } catch (err) {
+        if (String(err?.message || err) !== "Unauthorized") {
+          console.error(err);
+          alert(`Could not generate PDF.\n\n${err.message || err}`);
+        }
+      } finally {
+        generateBtn.disabled = false;
+        generateBtn.textContent = "Generate PDF";
+      }
     }
-
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "quote.pdf";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
-  } catch (err) {
-    console.error(err);
-    alert(`Could not generate PDF.\n\n${err.message || err}`);
-  } finally {
-    generateBtn.disabled = false;
-    generateBtn.textContent = "Generate PDF";
-  }
-}
-
-
-
-
-
-
-
-
-
 
     function clearSelected() {
       selectedIds = new Set();
       priceOverrides = {};
       renderItems();
+    }
+
+    async function tryLogin(password) {
+      setSavedPassword(password);
+
+      try {
+        const res = await fetch(`${API_BASE}/filters`, {
+          headers: {
+            "X-Quote-Password": password
+          }
+        });
+
+        if (res.status === 401) {
+          clearSavedPassword();
+          showAuthScreen("Incorrect password.");
+          return false;
+        }
+
+        if (!res.ok) {
+          clearSavedPassword();
+          showAuthScreen("Could not verify password.");
+          return false;
+        }
+
+        hideAuthScreen();
+        await fetchFilters();
+        await fetchItems();
+        return true;
+      } catch (err) {
+        clearSavedPassword();
+        showAuthScreen("Could not reach server.");
+        return false;
+      }
     }
 
     customerLogoEl.addEventListener("change", async (e) => {
@@ -778,6 +1030,43 @@
     generateBtn.addEventListener("click", handleGenerate);
     clearBtn.addEventListener("click", clearSelected);
 
+    loginBtn.addEventListener("click", async () => {
+      authErrorEl.textContent = "";
+      loginBtn.disabled = true;
+      loginBtn.textContent = "Checking...";
+
+      try {
+        const password = passwordInputEl.value.trim();
+        if (!password) {
+          authErrorEl.textContent = "Enter the password.";
+          return;
+        }
+        await tryLogin(password);
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = "Enter";
+      }
+    });
+
+    passwordInputEl.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        loginBtn.click();
+      }
+    });
+
+    logoutBtn.addEventListener("click", () => {
+      clearSavedPassword();
+      selectedIds = new Set();
+      priceOverrides = {};
+      currentItems = [];
+      itemsWrapEl.innerHTML = `<div class="empty">Enter password to load products.</div>`;
+      showingCountEl.textContent = "Showing 0 items";
+      updateSelectedCount();
+      showAuthScreen("");
+      passwordInputEl.value = "";
+    });
+
     async function init() {
       try {
         const today = new Date();
@@ -786,14 +1075,20 @@
         const dd = String(today.getDate()).padStart(2, "0");
         effectiveDateEl.value = `${yyyy}-${mm}-${dd}`;
 
-        await fetchFilters();
-        await fetchItems();
+        const saved = getSavedPassword();
+        if (saved) {
+          await tryLogin(saved);
+        } else {
+          showAuthScreen("");
+        }
       } catch (err) {
         console.error(err);
         itemsWrapEl.innerHTML = `<div class="empty">Could not load the tool.</div>`;
+        showAuthScreen("Could not load the tool.");
       }
     }
 
+    updateSelectedCount();
     init();
   </script>
 </body>
