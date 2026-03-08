@@ -28,7 +28,6 @@ WEB_ROOT = os.path.join(PROJECT_ROOT, "web")
 ITEMS_JSON = os.path.join(WEB_ROOT, "items.json")
 IMAGES_DIR = os.path.join(WEB_ROOT, "assets", "items")
 
-# Support both likely Emser logo locations
 EMSER_LOGO_CANDIDATES = [
     os.path.join(WEB_ROOT, "assets", "emserlogo.png"),
     os.path.join(WEB_ROOT, "assets", "items", "emserlogo.png"),
@@ -531,11 +530,9 @@ def draw_header(
     customer_name: str,
     customer_logo_reader: Optional[ImageReader] = None,
 ):
-    # top band
     c.setFillColor(BRAND_BLUE)
     c.rect(0, H - 20, W, 20, stroke=0, fill=1)
 
-    # Emser logo top-left
     emser_reader = get_emser_logo_reader()
     if emser_reader:
         try:
@@ -551,7 +548,6 @@ def draw_header(
         except Exception:
             pass
 
-    # customer logo top-right
     if customer_logo_reader:
         try:
             c.drawImage(
@@ -566,7 +562,6 @@ def draw_header(
         except Exception:
             pass
 
-    # title
     c.setFillColor(BRAND_BLUE_DARK)
     c.setFont("Helvetica-Bold", 18)
     c.drawCentredString(W / 2, H - 38, "Local Market Stocking Program")
@@ -575,7 +570,6 @@ def draw_header(
     c.setFont("Helvetica-Bold", 10)
     c.drawCentredString(W / 2, H - 52, "EMSER TILE")
 
-    # detail rows
     left_x = 30
     right_x = W - 30
     row1_y = H - 96
@@ -617,53 +611,51 @@ def draw_card(
     it: Dict[str, Any],
     mode: str,
 ):
-    # shadow
     c.setFillColor(colors.Color(0, 0, 0, alpha=0.05))
     c.roundRect(x + 1.6, y_top - card_h - 1.6, card_w, card_h, 9, stroke=0, fill=1)
 
-    # card
     c.setStrokeColor(colors.Color(0, 0, 0, alpha=0.16))
     c.setFillColor(colors.white)
     c.roundRect(x, y_top - card_h, card_w, card_h, 9, stroke=1, fill=1)
 
     pad = 8
-    price_col_w = 56
-    text_area_w = card_w - (pad * 2) - price_col_w - 6
+    inner_x = x + pad
+    inner_w = card_w - (pad * 2)
 
-    # title
     title_lines, title_size = fit_lines(
         c,
         norm(it.get("name")),
-        text_area_w,
+        inner_w,
         "Helvetica-Bold",
-        max_lines=2,
-        start_size=8.5,
-        min_size=6.1,
+        max_lines=3,
+        start_size=7.2,
+        min_size=5.5,
     )
 
-    title_y = y_top - 13
+    title_y = y_top - 14
     c.setFillColor(BRAND_BLUE_DARK)
     c.setFont("Helvetica-Bold", title_size)
-    for i, line in enumerate(title_lines[:2]):
-        c.drawString(x + pad, title_y - (i * (title_size + 1.6)), line)
+    for i, line in enumerate(title_lines[:3]):
+        c.drawString(inner_x, title_y - (i * (title_size + 1.2)), line)
 
-    # price
+    title_block_h = max(1, len(title_lines)) * (title_size + 1.2)
+    price_y = title_y - title_block_h - 6
+
     price_txt, price_size = fit_one_line(
         c,
         fmt_price(it, mode),
-        price_col_w,
+        inner_w,
         "Helvetica-Bold",
-        start_size=9.6,
-        min_size=6.4,
+        start_size=10.0,
+        min_size=8.8,
     )
-    c.setFont("Helvetica-Bold", price_size)
     c.setFillColor(colors.black)
-    c.drawRightString(x + card_w - pad, y_top - 14, price_txt)
+    c.setFont("Helvetica-Bold", price_size)
+    c.drawString(inner_x, price_y, price_txt)
 
-    # lower content region
     img_size = 36
-    img_x = x + pad
-    img_y = y_top - card_h + 12
+    img_x = inner_x
+    img_y = y_top - card_h + 16
 
     img_path = resolve_item_image_path(norm(it.get("image")))
     img_reader = get_image_reader_from_path(img_path, max_px=180, quality=55) if img_path else None
@@ -685,36 +677,41 @@ def draw_card(
     else:
         draw_placeholder_image(c, img_x, img_y, img_size, img_size)
 
-    # bottom-left aligned text block
-    meta_x = img_x + img_size + 8
+    meta_x = img_x + img_size + 6
     meta_w = card_w - (meta_x - x) - pad
-    manufacturer_y = img_y + 20
-    sku_y = img_y + 5
 
+    # tighter manufacturer/SKU stack
     mfr_lines, mfr_size = fit_lines(
         c,
         norm(it.get("manufacturer")),
         meta_w,
         "Helvetica",
         max_lines=2,
-        start_size=6.0,
-        min_size=4.8,
+        start_size=5.4,
+        min_size=4.6,
     )
+
+    mfr_line_gap = 0.8
+    mfr_start_y = img_y + 22
+
     c.setFillColor(SOFT_TEXT)
     c.setFont("Helvetica", mfr_size)
     for i, line in enumerate(mfr_lines[:2]):
-        c.drawString(meta_x, manufacturer_y - (i * (mfr_size + 1.2)), line)
+        c.drawString(meta_x, mfr_start_y - (i * (mfr_size + mfr_line_gap)), line)
 
     sku_txt, sku_size = fit_one_line(
         c,
         norm(it.get("id")),
         meta_w,
         "Helvetica",
-        start_size=5.8,
-        min_size=4.8,
+        start_size=5.2,
+        min_size=4.5,
     )
     c.setFillColor(colors.Color(0, 0, 0, alpha=0.58))
     c.setFont("Helvetica", sku_size)
+
+    # put SKU directly under manufacturer block
+    sku_y = mfr_start_y - (len(mfr_lines) * (mfr_size + mfr_line_gap)) - 1.5
     c.drawString(meta_x, sku_y, sku_txt)
 
 
@@ -759,7 +756,7 @@ def build_pdf(
 
     usable_w = W - left - right
     card_w = (usable_w - gutter * (cols - 1)) / cols
-    card_h = 82
+    card_h = 92
 
     customer_logo_reader = decode_logo_data(customer_logo_data)
     page_num = 1

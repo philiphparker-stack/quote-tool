@@ -10150,5 +10150,18 @@
     "image": "comingsoon.png",
     "aliases": "",
     "search_terms": "3'3\"X16'5\" GURU SHOWER SYSTEMS ZGUIFU5100 WATERPROOFING SHEET"
-  }
+  },
+
+  {
+    "id": "ZBL300-420-12525-1",
+    "name": "1/2 EDGE PROTECTOR ALUMINUM SATIN GOLD",
+    "manufacturer": "BLANKE",
+    "category": "TRIM",
+    "uom": "ea",
+    "price_direct": 10.99,
+    "price_oow": 11.24,
+    "image": "blanke/blanketrim.png",
+    "aliases": "",
+    "search_terms": "1/2 EDGE PROTECTOR ALUMINUM SATIN GOLD"
+  }   
 ]
