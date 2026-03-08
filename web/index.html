@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quote Tool</title>
+  <style>
+    :root{
+      --bg:#f7f7f7;
+      --panel:#ffffff;
+      --line:#dddddd;
+      --text:#111111;
+      --muted:#666666;
+      --soft:#f0f0f0;
+      --selected:#eaf4ff;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      font-family: Arial, Helvetica, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    .page{
+      max-width:1500px;
+      margin:0 auto;
+      padding:16px 20px 20px;
+    }
+
+    h1{
+      margin:0 0 4px;
+      font-size:24px;
+      line-height:1.1;
+    }
+
+    .sub{
+      margin:0 0 14px;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .topWrap{
+      display:grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap:14px;
+      align-items:start;
+      margin-bottom:14px;
+    }
+
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px 14px;
+    }
+
+    .panelTitle{
+      font-size:13px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      color:#222;
+      margin:0 0 8px;
+    }
+
+    .panelSub{
+      font-size:12px;
+      color:var(--muted);
+      margin:0 0 10px;
+    }
+
+    .formGrid{
+      display:grid;
+      gap:10px;
+    }
+
+    .filtersGrid{
+      grid-template-columns: repeat(3, minmax(160px, 1fr));
+    }
+
+    .pdfTopGrid{
+      grid-template-columns: 130px 160px 150px;
+    }
+
+    .pdfBottomRow{
+      display:grid;
+      grid-template-columns: 230px 86px auto auto auto;
+      gap:10px;
+      align-items:end;
+      margin-top:10px;
+    }
+
+    .field label{
+      display:block;
+      font-size:12px;
+      font-weight:700;
+      margin:0 0 5px;
+    }
+
+    .field input,
+    .field select{
+      width:100%;
+      height:36px;
+      border:1px solid #cfcfcf;
+      border-radius:12px;
+      background:#fff;
+      padding:0 12px;
+      font-size:14px;
+      outline:none;
+    }
+
+    .field input:focus,
+    .field select:focus{
+      border-color:#999;
+    }
+
+    input[type="file"]{
+      padding:6px 8px;
+      height:36px;
+    }
+
+    .logoPreviewWrap label{
+      display:block;
+      font-size:12px;
+      font-weight:700;
+      margin:0 0 5px;
+    }
+
+    .logoPreview{
+      width:86px;
+      height:36px;
+      border:1px dashed #bdbdbd;
+      border-radius:10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+      background:#fafafa;
+      font-size:11px;
+      color:#666;
+    }
+
+    .logoPreview img{
+      max-width:100%;
+      max-height:100%;
+      object-fit:contain;
+      display:block;
+    }
+
+    .btnInline{
+      display:flex;
+      align-items:end;
+      gap:10px;
+    }
+
+    button{
+      height:36px;
+      border-radius:12px;
+      border:1px solid #111;
+      background:#fff;
+      color:#111;
+      padding:0 16px;
+      font-size:14px;
+      font-weight:800;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+
+    button.primary{
+      background:#111;
+      color:#fff;
+    }
+
+    button:hover{
+      opacity:.96;
+    }
+
+    .statusBar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      padding:10px 2px 12px;
+      border-bottom:1px solid var(--line);
+      margin-bottom:14px;
+      flex-wrap:wrap;
+    }
+
+    .statusLeft{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+
+    .pill{
+      background:#ececec;
+      border-radius:999px;
+      padding:6px 11px;
+      font-size:13px;
+      color:#444;
+    }
+
+    .productsGrid{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap:10px;
+    }
+
+    .itemCard{
+      background:#fff;
+      border:1px solid #d9d9d9;
+      border-radius:14px;
+      padding:10px;
+      display:grid;
+      grid-template-columns: 24px 54px minmax(0, 1fr);
+      gap:10px;
+      align-items:start;
+      min-height:96px;
+      cursor:pointer;
+    }
+
+    .itemCard.selected{
+      background:var(--selected);
+      border-color:#9cc7ff;
+      box-shadow:0 0 0 1px #cfe4ff inset;
+    }
+
+    .checkWrap{
+      padding-top:1px;
+    }
+
+    .checkWrap input{
+      width:17px;
+      height:17px;
+      cursor:pointer;
+    }
+
+    .thumb{
+      width:54px;
+      height:54px;
+      border-radius:10px;
+      background:#fafafa;
+      border:1px solid #ececec;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+
+    .thumb img{
+      max-width:100%;
+      max-height:100%;
+      object-fit:contain;
+      display:block;
+    }
+
+    .thumb.placeholder{
+      position:relative;
+    }
+
+    .thumb.placeholder:before,
+    .thumb.placeholder:after{
+      content:"";
+      position:absolute;
+      background:#c8c8c8;
+    }
+
+    .thumb.placeholder:before{
+      width:1px;
+      height:80%;
+      transform:rotate(45deg);
+    }
+
+    .thumb.placeholder:after{
+      width:1px;
+      height:80%;
+      transform:rotate(-45deg);
+    }
+
+    .itemBody{
+      min-width:0;
+    }
+
+    .itemName{
+      font-size:13px;
+      font-weight:800;
+      line-height:1.05;
+      margin:0 0 4px;
+      word-break:break-word;
+    }
+
+    .itemMeta{
+      font-size:11px;
+      color:#555;
+      margin:0 0 2px;
+      word-break:break-word;
+    }
+
+    .itemPrice{
+      font-size:12px;
+      font-weight:800;
+      margin:5px 0 6px;
+    }
+
+    .overrideRow{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      margin-top:4px;
+      flex-wrap:wrap;
+    }
+
+    .overrideRow label{
+      font-size:11px;
+      font-weight:700;
+      color:#444;
+    }
+
+    .overrideRow input{
+      width:86px;
+      height:26px;
+      border:1px solid #cfcfcf;
+      border-radius:8px;
+      padding:0 8px;
+      font-size:12px;
+    }
+
+    .empty{
+      background:#fff;
+      border:1px dashed #cfcfcf;
+      border-radius:16px;
+      padding:28px;
+      text-align:center;
+      color:#666;
+    }
+
+    .smallNote{
+      font-size:12px;
+      color:#777;
+      margin-top:6px;
+    }
+
+    @media (max-width: 1280px){
+      .topWrap{
+        grid-template-columns:1fr;
+      }
+      .pdfBottomRow{
+        grid-template-columns: 1fr 86px auto auto auto;
+      }
+    }
+
+    @media (max-width: 980px){
+      .filtersGrid,
+      .pdfTopGrid{
+        grid-template-columns:1fr 1fr;
+      }
+      .pdfBottomRow{
+        grid-template-columns:1fr 86px;
+      }
+      .productsGrid{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px){
+      .filtersGrid,
+      .pdfTopGrid,
+      .pdfBottomRow{
+        grid-template-columns:1fr;
+      }
+      .productsGrid{
+        grid-template-columns:1fr;
+      }
+      .itemCard{
+        grid-template-columns:22px 50px minmax(0, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Quote Tool</h1>
+    <p class="sub">Find products on the left, then build the PDF quote settings on the right.</p>
+
+    <div class="topWrap">
+      <section class="panel">
+        <div class="panelTitle">Find Products</div>
+        <div class="panelSub">These filters only control what products you see below.</div>
+
+        <div class="formGrid filtersGrid">
+          <div class="field">
+            <label for="manufacturer">Manufacturer</label>
+            <select id="manufacturer">
+              <option value="">All Manufacturers</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="category">Category</label>
+            <select id="category">
+              <option value="">All Categories</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="search">Search</label>
+            <input id="search" type="text" placeholder="Search name, SKU, color, size, etc." />
+          </div>
+        </div>
+
+        <div class="smallNote">
+          Search supports loose matching like SKU, color names, fractions, and keywords.
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panelTitle">PDF Quote Settings</div>
+        <div class="panelSub">These fields affect the generated PDF.</div>
+
+        <div class="formGrid pdfTopGrid">
+          <div class="field">
+            <label for="priceMode">Price Mode</label>
+            <select id="priceMode">
+              <option value="direct">Direct</option>
+              <option value="oow">OOW</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="programName">Program Name</label>
+            <input id="programName" type="text" value="TEST" />
+          </div>
+
+          <div class="field">
+            <label for="effectiveDate">Effective Date</label>
+            <input id="effectiveDate" type="date" />
+          </div>
+        </div>
+
+        <div class="pdfBottomRow">
+          <div class="field">
+            <label for="customerLogo">Customer Logo</label>
+            <input id="customerLogo" type="file" accept="image/*" />
+          </div>
+
+          <div class="logoPreviewWrap">
+            <label>Preview</label>
+            <div class="logoPreview" id="logoPreview">No logo</div>
+          </div>
+
+          <div class="btnInline">
+            <button id="refreshBtn" type="button">Refresh List</button>
+          </div>
+
+          <div class="btnInline">
+            <button id="generateBtn" class="primary" type="button">Generate PDF</button>
+          </div>
+
+          <div class="btnInline">
+            <button id="clearBtn" type="button">Clear Selected</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="statusBar">
+      <div class="statusLeft">
+        <div id="showingCount">Showing 0 items</div>
+        <div class="pill" id="selectedCount">Selected: 0</div>
+      </div>
+    </div>
+
+    <div id="itemsWrap">
+      <div class="empty">Loading products...</div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "http://127.0.0.1:8000";
+    const COMING_SOON_SRC = "assets/items/comingsoon.png";
+
+    const manufacturerEl = document.getElementById("manufacturer");
+    const categoryEl = document.getElementById("category");
+    const searchEl = document.getElementById("search");
+
+    const priceModeEl = document.getElementById("priceMode");
+    const programNameEl = document.getElementById("programName");
+    const effectiveDateEl = document.getElementById("effectiveDate");
+
+    const customerLogoEl = document.getElementById("customerLogo");
+    const logoPreviewEl = document.getElementById("logoPreview");
+
+    const refreshBtn = document.getElementById("refreshBtn");
+    const generateBtn = document.getElementById("generateBtn");
+    const clearBtn = document.getElementById("clearBtn");
+
+    const showingCountEl = document.getElementById("showingCount");
+    const selectedCountEl = document.getElementById("selectedCount");
+    const itemsWrapEl = document.getElementById("itemsWrap");
+
+    let allFilters = null;
+    let currentItems = [];
+    let selectedIds = new Set();
+    let priceOverrides = {};
+    let customerLogoData = null;
+
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function fmtPrice(item, mode) {
+      const raw = mode === "direct" ? item.price_direct : item.price_oow;
+      if (raw === null || raw === undefined || raw === "") return "";
+      const num = Number(raw);
+      if (Number.isNaN(num)) return "";
+      return `$${num.toFixed(2)}/${item.uom || "ea"}`;
+    }
+
+    function getImageSrc(item) {
+      const img = String(item.image || "").trim();
+      return img ? `assets/items/${encodeURI(img)}` : COMING_SOON_SRC;
+    }
+
+    function updateSelectedCount() {
+      selectedCountEl.textContent = `Selected: ${selectedIds.size}`;
+    }
+
+    async function fetchFilters() {
+      const res = await fetch(`${API_BASE}/filters`);
+      if (!res.ok) throw new Error("Failed to load filters");
+      allFilters = await res.json();
+
+      manufacturerEl.innerHTML = `<option value="">All Manufacturers</option>`;
+      (allFilters.manufacturers || []).forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = m;
+        manufacturerEl.appendChild(opt);
+      });
+
+      rebuildCategories();
+    }
+
+    function rebuildCategories() {
+      const selectedManufacturer = manufacturerEl.value || "";
+      categoryEl.innerHTML = `<option value="">All Categories</option>`;
+
+      let cats = [];
+      if (selectedManufacturer && allFilters?.categories_by_manufacturer?.[selectedManufacturer]) {
+        cats = allFilters.categories_by_manufacturer[selectedManufacturer];
+      } else {
+        cats = allFilters?.categories || [];
+      }
+
+      cats.forEach(cat => {
+        const opt = document.createElement("option");
+        opt.value = cat;
+        opt.textContent = cat;
+        categoryEl.appendChild(opt);
+      });
+    }
+
+    async function fetchItems() {
+      const params = new URLSearchParams();
+      if (manufacturerEl.value) params.set("manufacturer", manufacturerEl.value);
+      if (categoryEl.value) params.set("category", categoryEl.value);
+      if (searchEl.value.trim()) params.set("q", searchEl.value.trim());
+      params.set("limit", "500");
+
+      itemsWrapEl.innerHTML = `<div class="empty">Loading products...</div>`;
+
+      const res = await fetch(`${API_BASE}/items?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to load items");
+
+      const data = await res.json();
+      currentItems = data.items || [];
+      renderItems();
+    }
+
+    function renderItems() {
+      showingCountEl.textContent = `Showing ${currentItems.length} items`;
+
+      if (!currentItems.length) {
+        itemsWrapEl.innerHTML = `<div class="empty">No products found.</div>`;
+        updateSelectedCount();
+        return;
+      }
+
+      const mode = priceModeEl.value;
+      const html = currentItems.map(item => {
+        const checked = selectedIds.has(item.id);
+        const overrideVal = priceOverrides[item.id] ?? "";
+        const src = getImageSrc(item);
+
+        return `
+          <div class="itemCard ${checked ? "selected" : ""}" data-item-id="${escapeHtml(item.id)}">
+            <div class="checkWrap">
+              <input type="checkbox" class="itemCheck" data-id="${escapeHtml(item.id)}" ${checked ? "checked" : ""} />
+            </div>
+
+            <div class="thumb">
+              <img src="${src}" alt="${escapeHtml(item.name)}"
+                   onerror="if(this.dataset.fallback!=='1'){this.dataset.fallback='1';this.src='${COMING_SOON_SRC}';}else{this.parentElement.classList.add('placeholder');this.remove();}" />
+            </div>
+
+            <div class="itemBody">
+              <div class="itemName">${escapeHtml(item.name)}</div>
+              <div class="itemMeta">${escapeHtml(item.manufacturer || "")}</div>
+              <div class="itemMeta">${escapeHtml(item.id || "")}</div>
+              <div class="itemMeta">${escapeHtml(item.category || "")}</div>
+              <div class="itemPrice">${escapeHtml(fmtPrice(item, mode))}</div>
+
+              <div class="overrideRow">
+                <label for="ovr_${escapeHtml(item.id)}">Override</label>
+                <input
+                  id="ovr_${escapeHtml(item.id)}"
+                  type="text"
+                  inputmode="decimal"
+                  placeholder="ex: 12.95"
+                  class="overrideInput"
+                  data-id="${escapeHtml(item.id)}"
+                  value="${escapeHtml(overrideVal)}"
+                />
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      itemsWrapEl.innerHTML = `<div class="productsGrid">${html}</div>`;
+
+      document.querySelectorAll(".itemCheck").forEach(cb => {
+        cb.addEventListener("click", e => e.stopPropagation());
+        cb.addEventListener("change", e => {
+          const id = e.target.dataset.id;
+          if (e.target.checked) selectedIds.add(id);
+          else selectedIds.delete(id);
+          renderItems();
+        });
+      });
+
+      document.querySelectorAll(".overrideInput").forEach(inp => {
+        inp.addEventListener("click", e => e.stopPropagation());
+        inp.addEventListener("input", e => {
+          const id = e.target.dataset.id;
+          const val = e.target.value;
+          if (val.trim() === "") {
+            delete priceOverrides[id];
+          } else {
+            priceOverrides[id] = val;
+          }
+        });
+      });
+
+      document.querySelectorAll(".itemCard").forEach(card => {
+        card.addEventListener("click", e => {
+          if (e.target.closest(".overrideInput")) return;
+          const id = card.dataset.itemId;
+          if (selectedIds.has(id)) selectedIds.delete(id);
+          else selectedIds.add(id);
+          renderItems();
+        });
+      });
+
+      updateSelectedCount();
+    }
+
+    function debounce(fn, wait = 250) {
+      let t = null;
+      return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...args), wait);
+      };
+    }
+
+    async function handleGenerate() {
+  if (!selectedIds.size) {
+    alert("Select at least one item first.");
+    return;
+  }
+
+  generateBtn.disabled = true;
+  generateBtn.textContent = "Generating...";
+
+  try {
+    const payload = {
+      program: programNameEl.value.trim() || "TEST",
+      effective_date: effectiveDateEl.value || "",
+      price_mode: priceModeEl.value,
+      item_ids: Array.from(selectedIds),
+      customer_logo_data: customerLogoData,
+      price_overrides: priceOverrides
+    };
+
+    const res = await fetch(`${API_BASE}/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error("PDF generate error:", txt);
+      alert(txt || "PDF generation failed");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "quote.pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  } catch (err) {
+    console.error(err);
+    alert(`Could not generate PDF.\n\n${err.message || err}`);
+  } finally {
+    generateBtn.disabled = false;
+    generateBtn.textContent = "Generate PDF";
+  }
+}
+
+
+
+
+
+
+
+
+
+
+    function clearSelected() {
+      selectedIds = new Set();
+      priceOverrides = {};
+      renderItems();
+    }
+
+    customerLogoEl.addEventListener("change", async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) {
+        customerLogoData = null;
+        logoPreviewEl.innerHTML = "No logo";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        customerLogoData = reader.result;
+        logoPreviewEl.innerHTML = `<img src="${reader.result}" alt="Customer Logo" />`;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    manufacturerEl.addEventListener("change", async () => {
+      rebuildCategories();
+      await fetchItems();
+    });
+
+    categoryEl.addEventListener("change", fetchItems);
+    searchEl.addEventListener("input", debounce(fetchItems, 250));
+    priceModeEl.addEventListener("change", renderItems);
+
+    refreshBtn.addEventListener("click", fetchItems);
+    generateBtn.addEventListener("click", handleGenerate);
+    clearBtn.addEventListener("click", clearSelected);
+
+    async function init() {
+      try {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, "0");
+        const dd = String(today.getDate()).padStart(2, "0");
+        effectiveDateEl.value = `${yyyy}-${mm}-${dd}`;
+
+        await fetchFilters();
+        await fetchItems();
+      } catch (err) {
+        console.error(err);
+        itemsWrapEl.innerHTML = `<div class="empty">Could not load the tool.</div>`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
