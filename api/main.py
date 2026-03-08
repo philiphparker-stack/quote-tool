@@ -7,7 +7,8 @@ from typing import List, Dict, Any, Optional, Tuple
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from reportlab.lib.pagesizes import letter
@@ -872,3 +873,13 @@ def generate(req: GenerateReq):
         media_type="application/pdf",
         headers={"Content-Disposition": 'attachment; filename="quote.pdf"'},
     )
+
+    # ============================================================
+# Serve frontend
+# ============================================================
+app.mount("/assets", StaticFiles(directory=os.path.join(WEB_ROOT, "assets")), name="assets")
+
+
+@app.get("/")
+def serve_frontend():
+    return FileResponse(os.path.join(WEB_ROOT, "index.html"))
