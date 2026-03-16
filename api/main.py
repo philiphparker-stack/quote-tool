@@ -137,7 +137,7 @@ def build_filters(items: List[Dict[str, Any]]) -> Dict[str, Any]:
 # ============================================================
 def normalize_search_text(s: Any) -> str:
     s = norm(s).lower()
-    s = s.replace('"', ' ')
+    s = s.replace('"', " ")
     s = s.replace("'", " ")
     s = s.replace("/", " ")
     s = s.replace("-", " ")
@@ -497,7 +497,6 @@ BRAND_BLUE = colors.HexColor("#0F3A6D")
 BRAND_BLUE_DARK = colors.HexColor("#0A2D55")
 BRAND_GOLD = colors.HexColor("#BC8644")
 SOFT_TEXT = colors.HexColor("#5F6B7A")
-LIGHT_LINE = colors.HexColor("#D6DCE5")
 
 
 def draw_placeholder_image(c: canvas.Canvas, x: float, y: float, w: float, h: float):
@@ -646,7 +645,7 @@ def draw_card(
         fmt_price(it, mode),
         inner_w,
         "Helvetica-Bold",
-        start_size=10.0,
+        start_size=12.8,
         min_size=8.8,
     )
     c.setFillColor(colors.black)
@@ -680,7 +679,6 @@ def draw_card(
     meta_x = img_x + img_size + 6
     meta_w = card_w - (meta_x - x) - pad
 
-    # tighter manufacturer/SKU stack
     mfr_lines, mfr_size = fit_lines(
         c,
         norm(it.get("manufacturer")),
@@ -691,13 +689,13 @@ def draw_card(
         min_size=4.6,
     )
 
-    mfr_line_gap = 0.8
+    line_gap = 0.8
     mfr_start_y = img_y + 22
 
     c.setFillColor(SOFT_TEXT)
     c.setFont("Helvetica", mfr_size)
     for i, line in enumerate(mfr_lines[:2]):
-        c.drawString(meta_x, mfr_start_y - (i * (mfr_size + mfr_line_gap)), line)
+        c.drawString(meta_x, mfr_start_y - (i * (mfr_size + line_gap)), line)
 
     sku_txt, sku_size = fit_one_line(
         c,
@@ -710,8 +708,7 @@ def draw_card(
     c.setFillColor(colors.Color(0, 0, 0, alpha=0.58))
     c.setFont("Helvetica", sku_size)
 
-    # put SKU directly under manufacturer block
-    sku_y = mfr_start_y - (len(mfr_lines) * (mfr_size + mfr_line_gap)) - 1.5
+    sku_y = mfr_start_y - ((len(mfr_lines) - 1) * (mfr_size + line_gap)) - mfr_size - 0.4
     c.drawString(meta_x, sku_y, sku_txt)
 
 
@@ -747,16 +744,27 @@ def build_pdf(
     c = canvas.Canvas(buf, pagesize=letter, pageCompression=1)
     W, H = letter
 
-    cols = 4
     left = 30
     right = 30
     bottom = 34
-    gutter = 8
-    row_gap = 9
-
     usable_w = W - left - right
-    card_w = (usable_w - gutter * (cols - 1)) / cols
+
+    row_gap = 9
+    section_gap = 6
     card_h = 92
+
+    # Full-width sections
+    full_cols = 4
+    full_gutter = 8
+    full_card_w = (usable_w - (full_gutter * (full_cols - 1))) / full_cols
+
+    # Half-width sections for small categories (1-2 items)
+    small_section_gap = 12
+    small_section_w = (usable_w - small_section_gap) / 2
+
+    small_cols = 2
+    small_gutter = 8
+    small_card_w = (small_section_w - small_gutter) / 2
 
     customer_logo_reader = decode_logo_data(customer_logo_data)
     page_num = 1
@@ -790,8 +798,8 @@ def build_pdf(
         )
         y = header_divider_y - 10
 
-    for cat_key, cat_items in groups:
-        label = pretty_category(cat_key)
+    def draw_full_width_section(label: str, section_items: List[Dict[str, Any]]):
+        nonlocal y
 
         if y - 22 < bottom:
             new_page()
@@ -802,26 +810,98 @@ def build_pdf(
         x = left
         col = 0
 
-        for it in cat_items:
+        for it in section_items:
             if col == 0 and (y - card_h) < bottom:
                 new_page()
-                header_h = draw_category_header(c, left, y, usable_w, label + " (cont.)")
+                header_h = draw_category_header(c, left, y, usable_w, f"{label} (cont.)")
                 y -= (header_h + 8)
 
-            draw_card(c, x, y, card_w, card_h, it, mode)
+            draw_card(c, x, y, full_card_w, card_h, it, mode)
 
             col += 1
-            if col == cols:
+            if col == full_cols:
                 col = 0
                 x = left
                 y -= (card_h + row_gap)
             else:
-                x += (card_w + gutter)
+                x += (full_card_w + full_gutter)
 
         if col != 0:
             y -= (card_h + row_gap)
         else:
             y -= 4
+
+    def calc_small_section_height(item_count: int) -> float:
+        header_h = 18
+        rows = 1 if item_count <= 2 else ((item_count + 1) // 2)
+        return header_h + 8 + (rows * card_h) + ((rows - 1) * row_gap) + row_gap
+
+    def draw_small_section(section_x: float, y_top: float, label: str, section_items: List[Dict[str, Any]]):
+        header_h = draw_category_header(c, section_x, y_top, small_section_w, label)
+        card_y = y_top - (header_h + 8)
+
+        x = section_x
+        col = 0
+
+        for it in section_items:
+            draw_card(c, x, card_y, small_card_w, card_h, it, mode)
+
+            col += 1
+            if col == small_cols:
+                col = 0
+                x = section_x
+                card_y -= (card_h + row_gap)
+            else:
+                x += (small_card_w + small_gutter)
+
+    i = 0
+    while i < len(groups):
+        cat_key, cat_items = groups[i]
+        label = pretty_category(cat_key)
+
+        # Pair small categories (1-2 items) on the same row
+        if len(cat_items) <= 2:
+            left_group = (cat_key, cat_items)
+            right_group = None
+
+            if i + 1 < len(groups):
+                next_cat_key, next_cat_items = groups[i + 1]
+                if len(next_cat_items) <= 2:
+                    right_group = (next_cat_key, next_cat_items)
+
+            left_needed = calc_small_section_height(len(left_group[1]))
+            right_needed = calc_small_section_height(len(right_group[1])) if right_group else 0
+            row_needed = max(left_needed, right_needed)
+
+            if y - row_needed < bottom:
+                new_page()
+
+            row_top = y
+
+            draw_small_section(
+                left,
+                row_top,
+                pretty_category(left_group[0]),
+                left_group[1],
+            )
+
+            if right_group:
+                draw_small_section(
+                    left + small_section_w + small_section_gap,
+                    row_top,
+                    pretty_category(right_group[0]),
+                    right_group[1],
+                )
+                i += 2
+            else:
+                i += 1
+
+            y -= (row_needed + section_gap)
+            continue
+
+        draw_full_width_section(label, cat_items)
+        y -= section_gap
+        i += 1
 
     draw_page_footer(c, W, page_num)
 
@@ -864,7 +944,7 @@ def get_filters(request: Request, manufacturer: Optional[str] = Query(default=No
         m = norm(manufacturer)
         return {
             "manufacturer": m,
-            "categories": filt["categories_by_manufacturer"].get(m, [])
+            "categories": filt["categories_by_manufacturer"].get(m, []),
         }
 
     return filt
