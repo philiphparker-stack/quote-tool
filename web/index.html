@@ -11,12 +11,10 @@
       --line:#d8dee6;
       --text:#111111;
       --muted:#667085;
-      --soft:#f7f9fc;
       --selected:#eaf4ff;
       --shadow:0 12px 32px rgba(16,24,40,.08);
       --brand:#0f3a6d;
       --brand-dark:#0a2d55;
-      --brand-soft:#edf3fb;
       --gold:#bc8644;
     }
 
@@ -187,6 +185,11 @@
       grid-template-columns: repeat(4, minmax(150px, 1fr));
     }
 
+    .customGrid{
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      margin-top:10px;
+    }
+
     .pdfBottomRow{
       display:grid;
       grid-template-columns: 230px 86px auto auto auto;
@@ -279,6 +282,19 @@
       background:var(--brand-dark);
       border-color:var(--brand-dark);
       color:#fff;
+    }
+
+    button.gold{
+      background:var(--gold);
+      border-color:var(--gold);
+      color:#fff;
+    }
+
+    button.small{
+      height:30px;
+      padding:0 10px;
+      font-size:12px;
+      border-radius:10px;
     }
 
     button:hover{
@@ -474,6 +490,39 @@
       margin-top:6px;
     }
 
+    .customList{
+      margin-top:12px;
+      display:grid;
+      gap:10px;
+    }
+
+    .customRow{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      border:1px solid #d8dee6;
+      background:#fff;
+      border-radius:14px;
+      padding:10px 12px;
+    }
+
+    .customRowMain{
+      min-width:0;
+    }
+
+    .customRowTitle{
+      font-size:13px;
+      font-weight:900;
+      color:var(--brand-dark);
+      margin-bottom:3px;
+    }
+
+    .customRowMeta{
+      font-size:11px;
+      color:#667085;
+    }
+
     @media (max-width: 1280px){
       .topWrap{
         grid-template-columns:1fr;
@@ -485,7 +534,8 @@
 
     @media (max-width: 1040px){
       .filtersGrid,
-      .pdfTopGrid{
+      .pdfTopGrid,
+      .customGrid{
         grid-template-columns:1fr 1fr;
       }
       .productsGrid{
@@ -496,6 +546,7 @@
     @media (max-width: 760px){
       .filtersGrid,
       .pdfTopGrid,
+      .customGrid,
       .pdfBottomRow{
         grid-template-columns:1fr;
       }
@@ -507,6 +558,10 @@
       }
       .topBar{
         flex-direction:column;
+      }
+      .customRow{
+        flex-direction:column;
+        align-items:flex-start;
       }
     }
   </style>
@@ -603,6 +658,42 @@
           </div>
         </div>
 
+        <div class="panelTitle" style="margin-top:14px;">Add Custom Item</div>
+        <div class="panelSub">Use this when the product is not in the system.</div>
+
+        <div class="formGrid customGrid">
+          <div class="field">
+            <label for="customName">Item Name</label>
+            <input id="customName" type="text" placeholder="Ex: Custom Backer Board" />
+          </div>
+
+          <div class="field">
+            <label for="customManufacturer">Manufacturer</label>
+            <input id="customManufacturer" type="text" placeholder="Ex: USG" />
+          </div>
+
+          <div class="field">
+            <label for="customCategory">Category</label>
+            <input id="customCategory" type="text" placeholder="Ex: BACKERBOARD" />
+          </div>
+
+          <div class="field">
+            <label for="customId">Item #</label>
+            <input id="customId" type="text" placeholder="Optional" />
+          </div>
+
+          <div class="field">
+            <label for="customPrice">Price</label>
+            <input id="customPrice" type="text" inputmode="decimal" placeholder="Ex: 19.95" />
+          </div>
+        </div>
+
+        <div class="btnInline" style="margin-top:10px;">
+          <button id="addCustomBtn" class="gold" type="button">Add Custom Item</button>
+        </div>
+
+        <div id="customItemsWrap" class="customList"></div>
+
         <div class="pdfBottomRow">
           <div class="field">
             <label for="customerLogo">Customer Logo</label>
@@ -665,6 +756,14 @@
     const programNameEl = document.getElementById("programName");
     const effectiveDateEl = document.getElementById("effectiveDate");
 
+    const customNameEl = document.getElementById("customName");
+    const customManufacturerEl = document.getElementById("customManufacturer");
+    const customCategoryEl = document.getElementById("customCategory");
+    const customIdEl = document.getElementById("customId");
+    const customPriceEl = document.getElementById("customPrice");
+    const addCustomBtn = document.getElementById("addCustomBtn");
+    const customItemsWrapEl = document.getElementById("customItemsWrap");
+
     const customerLogoEl = document.getElementById("customerLogo");
     const logoPreviewEl = document.getElementById("logoPreview");
 
@@ -681,6 +780,7 @@
     let selectedIds = new Set();
     let priceOverrides = {};
     let customerLogoData = null;
+    let customItems = [];
 
     function escapeHtml(str) {
       return String(str ?? "")
@@ -756,7 +856,7 @@
     }
 
     function updateSelectedCount() {
-      selectedCountEl.textContent = `Selected: ${selectedIds.size}`;
+      selectedCountEl.textContent = `Selected: ${selectedIds.size + customItems.length}`;
     }
 
     async function fetchFilters() {
@@ -811,11 +911,37 @@
       renderItems();
     }
 
+    function renderCustomItems() {
+      if (!customItems.length) {
+        customItemsWrapEl.innerHTML = "";
+        updateSelectedCount();
+        return;
+      }
+
+      customItemsWrapEl.innerHTML = customItems.map((item, idx) => `
+        <div class="customRow">
+          <div class="customRowMain">
+            <div class="customRowTitle">${escapeHtml(item.name)}</div>
+            <div class="customRowMeta">
+              ${escapeHtml(item.manufacturer || "CUSTOM ITEM")} |
+              ${escapeHtml(item.category || "OTHER")} |
+              ${escapeHtml(item.id || "")} |
+              $${Number(item.price || 0).toFixed(2)}/${escapeHtml(item.uom || "ea")}
+            </div>
+          </div>
+          <button class="small" type="button" onclick="removeCustomItem(${idx})">Remove</button>
+        </div>
+      `).join("");
+
+      updateSelectedCount();
+    }
+
     function renderItems() {
       showingCountEl.textContent = `Showing ${currentItems.length} items`;
 
       if (!currentItems.length) {
         itemsWrapEl.innerHTML = `<div class="empty">No products found.</div>`;
+        renderCustomItems();
         updateSelectedCount();
         return;
       }
@@ -833,8 +959,13 @@
             </div>
 
             <div class="thumb">
-              <img src="${src}" alt="${escapeHtml(item.name)}"
-                   onerror="if(this.dataset.fallback!=='1'){this.dataset.fallback='1';this.src='${COMING_SOON_SRC}';}else{this.parentElement.classList.add('placeholder');this.remove();}" />
+              <img
+                src="${src}"
+                alt="${escapeHtml(item.name)}"
+                loading="lazy"
+                decoding="async"
+                onerror="if(this.dataset.fallback!=='1'){this.dataset.fallback='1';this.src='${COMING_SOON_SRC}';}else{this.parentElement.classList.add('placeholder');this.remove();}"
+              />
             </div>
 
             <div class="itemBody">
@@ -896,6 +1027,7 @@
         });
       });
 
+      renderCustomItems();
       updateSelectedCount();
     }
 
@@ -907,9 +1039,58 @@
       };
     }
 
+    function clearCustomInputs() {
+      customNameEl.value = "";
+      customManufacturerEl.value = "";
+      customCategoryEl.value = "";
+      customIdEl.value = "";
+      customPriceEl.value = "";
+    }
+
+    function addCustomItem() {
+      const name = customNameEl.value.trim();
+      const manufacturer = customManufacturerEl.value.trim();
+      const category = customCategoryEl.value.trim().toUpperCase();
+      const id = customIdEl.value.trim();
+      const priceRaw = customPriceEl.value.trim();
+
+      if (!name) {
+        alert("Custom item name is required.");
+        return;
+      }
+
+      if (!priceRaw) {
+        alert("Custom item price is required.");
+        return;
+      }
+
+      const price = Number(priceRaw.replace("$", "").replace(",", ""));
+      if (Number.isNaN(price)) {
+        alert("Enter a valid custom item price.");
+        return;
+      }
+
+      customItems.push({
+        name,
+        manufacturer: manufacturer || "CUSTOM ITEM",
+        category: category || "OTHER",
+        id: id || `CUSTOM-${customItems.length + 1}`,
+        uom: "ea",
+        price
+      });
+
+      clearCustomInputs();
+      renderCustomItems();
+    }
+
+    window.removeCustomItem = function(idx) {
+      customItems.splice(idx, 1);
+      renderCustomItems();
+    };
+
     async function handleGenerate() {
-      if (!selectedIds.size) {
-        alert("Select at least one item first.");
+      if (!selectedIds.size && !customItems.length) {
+        alert("Select at least one item or add a custom item first.");
         return;
       }
 
@@ -923,6 +1104,7 @@
           effective_date: effectiveDateEl.value || "",
           price_mode: priceModeEl.value,
           item_ids: Array.from(selectedIds),
+          custom_items: customItems,
           customer_logo_data: customerLogoData,
           price_overrides: priceOverrides
         };
@@ -965,6 +1147,8 @@
     function clearSelected() {
       selectedIds = new Set();
       priceOverrides = {};
+      customItems = [];
+      clearCustomInputs();
       renderItems();
     }
 
@@ -1026,6 +1210,7 @@
     searchEl.addEventListener("input", debounce(fetchItems, 250));
     priceModeEl.addEventListener("change", renderItems);
 
+    addCustomBtn.addEventListener("click", addCustomItem);
     refreshBtn.addEventListener("click", fetchItems);
     generateBtn.addEventListener("click", handleGenerate);
     clearBtn.addEventListener("click", clearSelected);
@@ -1060,7 +1245,9 @@
       selectedIds = new Set();
       priceOverrides = {};
       currentItems = [];
+      customItems = [];
       itemsWrapEl.innerHTML = `<div class="empty">Enter password to load products.</div>`;
+      customItemsWrapEl.innerHTML = "";
       showingCountEl.textContent = "Showing 0 items";
       updateSelectedCount();
       showAuthScreen("");

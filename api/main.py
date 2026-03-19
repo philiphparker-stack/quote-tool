@@ -54,14 +54,24 @@ app.add_middleware(
 )
 
 # ============================================================
-# Request model
+# Request models
 # ============================================================
+class CustomItemReq(BaseModel):
+    name: str
+    manufacturer: Optional[str] = None
+    category: Optional[str] = None
+    id: Optional[str] = None
+    uom: Optional[str] = "ea"
+    price: Optional[float] = None
+
+
 class GenerateReq(BaseModel):
     program: str = "TEST"
     customer_name: Optional[str] = None
     effective_date: Optional[str] = None
     price_mode: str = "direct"
     item_ids: List[str] = []
+    custom_items: Optional[List[CustomItemReq]] = None
     customer_logo_data: Optional[str] = None
     price_overrides: Optional[Dict[str, Any]] = None
 
@@ -137,7 +147,7 @@ def build_filters(items: List[Dict[str, Any]]) -> Dict[str, Any]:
 # ============================================================
 def normalize_search_text(s: Any) -> str:
     s = norm(s).lower()
-    s = s.replace('"', " ")
+    s = s.replace('"', ' ')
     s = s.replace("'", " ")
     s = s.replace("/", " ")
     s = s.replace("-", " ")
@@ -744,27 +754,16 @@ def build_pdf(
     c = canvas.Canvas(buf, pagesize=letter, pageCompression=1)
     W, H = letter
 
+    cols = 4
     left = 30
     right = 30
     bottom = 34
-    usable_w = W - left - right
-
+    gutter = 8
     row_gap = 9
-    section_gap = 6
+
+    usable_w = W - left - right
+    card_w = (usable_w - gutter * (cols - 1)) / cols
     card_h = 92
-
-    # Full-width sections
-    full_cols = 4
-    full_gutter = 8
-    full_card_w = (usable_w - (full_gutter * (full_cols - 1))) / full_cols
-
-    # Half-width sections for small categories (1-2 items)
-    small_section_gap = 12
-    small_section_w = (usable_w - small_section_gap) / 2
-
-    small_cols = 2
-    small_gutter = 8
-    small_card_w = (small_section_w - small_gutter) / 2
 
     customer_logo_reader = decode_logo_data(customer_logo_data)
     page_num = 1
@@ -782,6 +781,8 @@ def build_pdf(
 
     groups = group_items_for_pdf(items)
 
+    min_section_space = 18 + 8 + card_h + row_gap
+
     def new_page():
         nonlocal y, page_num, header_divider_y
         draw_page_footer(c, W, page_num)
@@ -798,10 +799,10 @@ def build_pdf(
         )
         y = header_divider_y - 10
 
-    def draw_full_width_section(label: str, section_items: List[Dict[str, Any]]):
-        nonlocal y
+    for cat_key, cat_items in groups:
+        label = pretty_category(cat_key)
 
-        if y - 22 < bottom:
+        if y - min_section_space < bottom:
             new_page()
 
         header_h = draw_category_header(c, left, y, usable_w, label)
@@ -810,98 +811,28 @@ def build_pdf(
         x = left
         col = 0
 
-        for it in section_items:
+        for it in cat_items:
             if col == 0 and (y - card_h) < bottom:
                 new_page()
-                header_h = draw_category_header(c, left, y, usable_w, f"{label} (cont.)")
+                if y - min_section_space < bottom:
+                    new_page()
+                header_h = draw_category_header(c, left, y, usable_w, label + " (cont.)")
                 y -= (header_h + 8)
 
-            draw_card(c, x, y, full_card_w, card_h, it, mode)
+            draw_card(c, x, y, card_w, card_h, it, mode)
 
             col += 1
-            if col == full_cols:
+            if col == cols:
                 col = 0
                 x = left
                 y -= (card_h + row_gap)
             else:
-                x += (full_card_w + full_gutter)
+                x += (card_w + gutter)
 
         if col != 0:
             y -= (card_h + row_gap)
         else:
             y -= 4
-
-    def calc_small_section_height(item_count: int) -> float:
-        header_h = 18
-        rows = 1 if item_count <= 2 else ((item_count + 1) // 2)
-        return header_h + 8 + (rows * card_h) + ((rows - 1) * row_gap) + row_gap
-
-    def draw_small_section(section_x: float, y_top: float, label: str, section_items: List[Dict[str, Any]]):
-        header_h = draw_category_header(c, section_x, y_top, small_section_w, label)
-        card_y = y_top - (header_h + 8)
-
-        x = section_x
-        col = 0
-
-        for it in section_items:
-            draw_card(c, x, card_y, small_card_w, card_h, it, mode)
-
-            col += 1
-            if col == small_cols:
-                col = 0
-                x = section_x
-                card_y -= (card_h + row_gap)
-            else:
-                x += (small_card_w + small_gutter)
-
-    i = 0
-    while i < len(groups):
-        cat_key, cat_items = groups[i]
-        label = pretty_category(cat_key)
-
-        # Pair small categories (1-2 items) on the same row
-        if len(cat_items) <= 2:
-            left_group = (cat_key, cat_items)
-            right_group = None
-
-            if i + 1 < len(groups):
-                next_cat_key, next_cat_items = groups[i + 1]
-                if len(next_cat_items) <= 2:
-                    right_group = (next_cat_key, next_cat_items)
-
-            left_needed = calc_small_section_height(len(left_group[1]))
-            right_needed = calc_small_section_height(len(right_group[1])) if right_group else 0
-            row_needed = max(left_needed, right_needed)
-
-            if y - row_needed < bottom:
-                new_page()
-
-            row_top = y
-
-            draw_small_section(
-                left,
-                row_top,
-                pretty_category(left_group[0]),
-                left_group[1],
-            )
-
-            if right_group:
-                draw_small_section(
-                    left + small_section_w + small_section_gap,
-                    row_top,
-                    pretty_category(right_group[0]),
-                    right_group[1],
-                )
-                i += 2
-            else:
-                i += 1
-
-            y -= (row_needed + section_gap)
-            continue
-
-        draw_full_width_section(label, cat_items)
-        y -= section_gap
-        i += 1
 
     draw_page_footer(c, W, page_num)
 
@@ -909,6 +840,40 @@ def build_pdf(
     pdf = buf.getvalue()
     buf.close()
     return pdf
+
+
+# ============================================================
+# Custom item helpers
+# ============================================================
+def build_custom_item(custom: CustomItemReq, index_num: int) -> Dict[str, Any]:
+    name = norm(custom.name)
+    if not name:
+        raise HTTPException(status_code=400, detail="Custom item name is required.")
+
+    custom_id = norm(custom.id) or f"CUSTOM-{index_num}"
+    category = norm(custom.category).upper() or "OTHER"
+    manufacturer = norm(custom.manufacturer) or "CUSTOM ITEM"
+    uom = norm(custom.uom) or "ea"
+
+    price_val: Optional[float] = None
+    if custom.price is not None and str(custom.price).strip() != "":
+        try:
+            price_val = float(custom.price)
+        except Exception:
+            raise HTTPException(status_code=400, detail=f"Invalid custom item price for {name}.")
+
+    return {
+        "id": custom_id,
+        "name": name,
+        "manufacturer": manufacturer,
+        "category": category,
+        "uom": uom,
+        "price_direct": price_val,
+        "price_oow": price_val,
+        "image": "",
+        "aliases": "",
+        "search_terms": "",
+    }
 
 
 # ============================================================
@@ -944,7 +909,7 @@ def get_filters(request: Request, manufacturer: Optional[str] = Query(default=No
         m = norm(manufacturer)
         return {
             "manufacturer": m,
-            "categories": filt["categories_by_manufacturer"].get(m, []),
+            "categories": filt["categories_by_manufacturer"].get(m, [])
         }
 
     return filt
@@ -984,11 +949,16 @@ def generate(request: Request, req: GenerateReq):
 
     items_map = load_items_map()
 
-    picked = []
+    picked: List[Dict[str, Any]] = []
+
     if req.item_ids and items_map:
         for item_id in req.item_ids:
             if item_id in items_map:
                 picked.append(dict(items_map[item_id]))
+
+    custom_items = req.custom_items or []
+    for idx, custom in enumerate(custom_items, start=1):
+        picked.append(build_custom_item(custom, idx))
 
     if not picked:
         raise HTTPException(status_code=400, detail="No valid selected items found.")
