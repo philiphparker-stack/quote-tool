@@ -149,6 +149,12 @@
       margin-bottom:14px;
     }
 
+    .leftStack{
+      display:grid;
+      gap:16px;
+      align-items:start;
+    }
+
     .panel{
       background:var(--panel);
       border:1px solid var(--line);
@@ -399,6 +405,12 @@
       max-height:100%;
       object-fit:contain;
       display:block;
+      opacity:0;
+      transition:opacity .18s ease;
+    }
+
+    .thumb img.loaded{
+      opacity:1;
     }
 
     .thumb.placeholder{
@@ -599,35 +611,75 @@
     </div>
 
     <div class="topWrap">
-      <section class="panel">
-        <div class="panelTitle">Find Products</div>
-        <div class="panelSub">These filters only control what products you see below.</div>
+      <div class="leftStack">
+        <section class="panel">
+          <div class="panelTitle">Find Products</div>
+          <div class="panelSub">These filters only control what products you see below.</div>
 
-        <div class="formGrid filtersGrid">
-          <div class="field">
-            <label for="manufacturer">Manufacturer</label>
-            <select id="manufacturer">
-              <option value="">All Manufacturers</option>
-            </select>
+          <div class="formGrid filtersGrid">
+            <div class="field">
+              <label for="manufacturer">Manufacturer</label>
+              <select id="manufacturer">
+                <option value="">All Manufacturers</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="category">Category</label>
+              <select id="category">
+                <option value="">All Categories</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="search">Search</label>
+              <input id="search" type="text" placeholder="Search name, SKU, color, size, etc." />
+            </div>
           </div>
 
-          <div class="field">
-            <label for="category">Category</label>
-            <select id="category">
-              <option value="">All Categories</option>
-            </select>
+          <div class="smallNote">
+            Search supports loose matching like SKU, color names, fractions, and keywords.
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panelTitle">Add Custom Item</div>
+          <div class="panelSub">Use this when the product is not in the system.</div>
+
+          <div class="formGrid customGrid">
+            <div class="field">
+              <label for="customName">Item Name</label>
+              <input id="customName" type="text" placeholder="Ex: Custom Backer Board" />
+            </div>
+
+            <div class="field">
+              <label for="customManufacturer">Manufacturer</label>
+              <input id="customManufacturer" type="text" placeholder="Ex: USG" />
+            </div>
+
+            <div class="field">
+              <label for="customCategory">Category</label>
+              <input id="customCategory" type="text" placeholder="Ex: BACKERBOARD" />
+            </div>
+
+            <div class="field">
+              <label for="customId">Item #</label>
+              <input id="customId" type="text" placeholder="Optional" />
+            </div>
+
+            <div class="field">
+              <label for="customPrice">Price</label>
+              <input id="customPrice" type="text" inputmode="decimal" placeholder="Ex: 19.95" />
+            </div>
           </div>
 
-          <div class="field">
-            <label for="search">Search</label>
-            <input id="search" type="text" placeholder="Search name, SKU, color, size, etc." />
+          <div class="btnInline" style="margin-top:10px;">
+            <button id="addCustomBtn" class="gold" type="button">Add Custom Item</button>
           </div>
-        </div>
 
-        <div class="smallNote">
-          Search supports loose matching like SKU, color names, fractions, and keywords.
-        </div>
-      </section>
+          <div id="customItemsWrap" class="customList"></div>
+        </section>
+      </div>
 
       <section class="panel">
         <div class="panelTitle">PDF Quote Settings</div>
@@ -657,42 +709,6 @@
             </select>
           </div>
         </div>
-
-        <div class="panelTitle" style="margin-top:14px;">Add Custom Item</div>
-        <div class="panelSub">Use this when the product is not in the system.</div>
-
-        <div class="formGrid customGrid">
-          <div class="field">
-            <label for="customName">Item Name</label>
-            <input id="customName" type="text" placeholder="Ex: Custom Backer Board" />
-          </div>
-
-          <div class="field">
-            <label for="customManufacturer">Manufacturer</label>
-            <input id="customManufacturer" type="text" placeholder="Ex: USG" />
-          </div>
-
-          <div class="field">
-            <label for="customCategory">Category</label>
-            <input id="customCategory" type="text" placeholder="Ex: BACKERBOARD" />
-          </div>
-
-          <div class="field">
-            <label for="customId">Item #</label>
-            <input id="customId" type="text" placeholder="Optional" />
-          </div>
-
-          <div class="field">
-            <label for="customPrice">Price</label>
-            <input id="customPrice" type="text" inputmode="decimal" placeholder="Ex: 19.95" />
-          </div>
-        </div>
-
-        <div class="btnInline" style="margin-top:10px;">
-          <button id="addCustomBtn" class="gold" type="button">Add Custom Item</button>
-        </div>
-
-        <div id="customItemsWrap" class="customList"></div>
 
         <div class="pdfBottomRow">
           <div class="field">
@@ -781,6 +797,56 @@
     let priceOverrides = {};
     let customerLogoData = null;
     let customItems = [];
+
+    const imageObserver = ("IntersectionObserver" in window)
+      ? new IntersectionObserver((entries, observer) => {
+          entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+
+            const img = entry.target;
+            const src = img.dataset.src;
+
+            if (src && !img.src) {
+              img.src = src;
+            }
+
+            observer.unobserve(img);
+          });
+        }, {
+          rootMargin: "250px 0px",
+          threshold: 0.01
+        })
+      : null;
+
+    function observeLazyImages() {
+      const imgs = document.querySelectorAll("img[data-src]");
+
+      imgs.forEach(img => {
+        if (imageObserver) {
+          imageObserver.observe(img);
+        } else {
+          if (!img.src) {
+            img.src = img.dataset.src;
+          }
+        }
+      });
+    }
+
+    function handleLazyImageLoad(img) {
+      img.classList.add("loaded");
+    }
+
+    function handleLazyImageError(img) {
+      if (img.dataset.fallback !== "1") {
+        img.dataset.fallback = "1";
+        img.src = COMING_SOON_SRC;
+        return;
+      }
+      if (img.parentElement) {
+        img.parentElement.classList.add("placeholder");
+      }
+      img.remove();
+    }
 
     function escapeHtml(str) {
       return String(str ?? "")
@@ -960,11 +1026,12 @@
 
             <div class="thumb">
               <img
-                src="${src}"
+                data-src="${src}"
                 alt="${escapeHtml(item.name)}"
                 loading="lazy"
                 decoding="async"
-                onerror="if(this.dataset.fallback!=='1'){this.dataset.fallback='1';this.src='${COMING_SOON_SRC}';}else{this.parentElement.classList.add('placeholder');this.remove();}"
+                onload="handleLazyImageLoad(this)"
+                onerror="handleLazyImageError(this)"
               />
             </div>
 
@@ -993,6 +1060,7 @@
       }).join("");
 
       itemsWrapEl.innerHTML = `<div class="productsGrid">${html}</div>`;
+      observeLazyImages();
 
       document.querySelectorAll(".itemCheck").forEach(cb => {
         cb.addEventListener("click", e => e.stopPropagation());
@@ -1087,6 +1155,9 @@
       customItems.splice(idx, 1);
       renderCustomItems();
     };
+
+    window.handleLazyImageLoad = handleLazyImageLoad;
+    window.handleLazyImageError = handleLazyImageError;
 
     async function handleGenerate() {
       if (!selectedIds.size && !customItems.length) {
