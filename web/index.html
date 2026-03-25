@@ -925,6 +925,22 @@
       selectedCountEl.textContent = `Selected: ${selectedIds.size + customItems.length}`;
     }
 
+    function hasActiveFilters() {
+      return Boolean(
+        manufacturerEl.value ||
+        categoryEl.value ||
+        searchEl.value.trim()
+      );
+    }
+
+    function renderIdleState() {
+      currentItems = [];
+      showingCountEl.textContent = "Showing 0 items";
+      itemsWrapEl.innerHTML = `<div class="empty">Select a manufacturer, choose a category, or type in search to load products.</div>`;
+      renderCustomItems();
+      updateSelectedCount();
+    }
+
     async function fetchFilters() {
       const res = await apiFetch(`${API_BASE}/filters`);
       if (!res.ok) throw new Error("Failed to load filters");
@@ -943,6 +959,8 @@
 
     function rebuildCategories() {
       const selectedManufacturer = manufacturerEl.value || "";
+      const currentCategory = categoryEl.value || "";
+
       categoryEl.innerHTML = `<option value="">All Categories</option>`;
 
       let cats = [];
@@ -958,9 +976,18 @@
         opt.textContent = cat;
         categoryEl.appendChild(opt);
       });
+
+      if (currentCategory && cats.includes(currentCategory)) {
+        categoryEl.value = currentCategory;
+      }
     }
 
     async function fetchItems() {
+      if (!hasActiveFilters()) {
+        renderIdleState();
+        return;
+      }
+
       const params = new URLSearchParams();
       if (manufacturerEl.value) params.set("manufacturer", manufacturerEl.value);
       if (categoryEl.value) params.set("category", categoryEl.value);
@@ -1247,7 +1274,7 @@
 
         hideAuthScreen();
         await fetchFilters();
-        await fetchItems();
+        renderIdleState();
         return true;
       } catch (err) {
         clearSavedPassword();
