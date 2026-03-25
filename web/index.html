@@ -475,6 +475,7 @@
       font-size:11px;
       font-weight:800;
       color:#475467;
+      min-width:42px;
     }
 
     .overrideRow input{
@@ -484,6 +485,10 @@
       border-radius:9px;
       padding:0 8px;
       font-size:12px;
+    }
+
+    .pricingToggleRow{
+      margin-top:8px;
     }
 
     .empty{
@@ -704,8 +709,8 @@
           <div class="field">
             <label for="priceMode">Price Mode</label>
             <select id="priceMode">
-              <option value="direct">Direct</option>
               <option value="oow">OOW</option>
+              <option value="direct">Direct</option>
             </select>
           </div>
         </div>
@@ -795,6 +800,7 @@
     let currentItems = [];
     let selectedIds = new Set();
     let priceOverrides = {};
+    let directEnabled = {};
     let customerLogoData = null;
     let customItems = [];
 
@@ -1039,21 +1045,21 @@
         return;
       }
 
-      const mode = priceModeEl.value;
       const html = currentItems.map(item => {
         const checked = selectedIds.has(item.id);
-        const overrideVal = priceOverrides[item.id] ?? "";
-        const src = getImageSrc(item);
+        const oowVal = priceOverrides[item.id]?.oow ?? "";
+        const directVal = priceOverrides[item.id]?.direct ?? "";
+        const isDirect = !!directEnabled[item.id];
 
         return `
           <div class="itemCard ${checked ? "selected" : ""}" data-item-id="${escapeHtml(item.id)}">
             <div class="checkWrap">
-              <input type="checkbox" class="itemCheck" data-id="${escapeHtml(item.id)}" ${checked ? "checked" : ""} />
+              <input type="checkbox" class="itemCheck" data-id="${escapeHtml(item.id)}" ${checked ? "checked" : ""}/>
             </div>
 
             <div class="thumb">
               <img
-                data-src="${src}"
+                data-src="${getImageSrc(item)}"
                 alt="${escapeHtml(item.name)}"
                 loading="lazy"
                 decoding="async"
@@ -1067,19 +1073,41 @@
               <div class="itemMeta">${escapeHtml(item.manufacturer || "")}</div>
               <div class="itemMeta">${escapeHtml(item.id || "")}</div>
               <div class="itemMeta">${escapeHtml(item.category || "")}</div>
-              <div class="itemPrice">${escapeHtml(fmtPrice(item, mode))}</div>
 
               <div class="overrideRow">
-                <label for="ovr_${escapeHtml(item.id)}">Override</label>
+                <label for="oow_${escapeHtml(item.id)}">OOW</label>
                 <input
-                  id="ovr_${escapeHtml(item.id)}"
+                  id="oow_${escapeHtml(item.id)}"
                   type="text"
-                  inputmode="decimal"
-                  placeholder="ex: 12.95"
                   class="overrideInput"
                   data-id="${escapeHtml(item.id)}"
-                  value="${escapeHtml(overrideVal)}"
+                  data-type="oow"
+                  inputmode="decimal"
+                  placeholder="ex: 29.50"
+                  value="${escapeHtml(oowVal)}"
                 />
+              </div>
+
+              ${isDirect ? `
+                <div class="overrideRow">
+                  <label for="direct_${escapeHtml(item.id)}">Direct</label>
+                  <input
+                    id="direct_${escapeHtml(item.id)}"
+                    type="text"
+                    class="overrideInput"
+                    data-id="${escapeHtml(item.id)}"
+                    data-type="direct"
+                    inputmode="decimal"
+                    placeholder="ex: 24.75"
+                    value="${escapeHtml(directVal)}"
+                  />
+                </div>
+              ` : ""}
+
+              <div class="pricingToggleRow">
+                <button class="small directToggleBtn" type="button" data-id="${escapeHtml(item.id)}">
+                  ${isDirect ? "Remove Direct Truck Pricing" : "Add Direct Truck Pricing"}
+                </button>
               </div>
             </div>
           </div>
@@ -1103,27 +1131,67 @@
         inp.addEventListener("click", e => e.stopPropagation());
         inp.addEventListener("input", e => {
           const id = e.target.dataset.id;
+          const type = e.target.dataset.type;
           const val = e.target.value;
-          if (val.trim() === "") {
-            delete priceOverrides[id];
-          } else {
-            priceOverrides[id] = val;
+
+          if (!priceOverrides[id]) {
+            priceOverrides[id] = {};
           }
+
+          if (val.trim() === "") {
+            delete priceOverrides[id][type];
+            if (!priceOverrides[id].oow && !priceOverrides[id].direct) {
+              delete priceOverrides[id];
+            }
+          } else {
+            priceOverrides[id][type] = val;
+          }
+        });
+      });
+
+      document.querySelectorAll(".directToggleBtn").forEach(btn => {
+        btn.addEventListener("click", e => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          toggleDirect(id);
         });
       });
 
       document.querySelectorAll(".itemCard").forEach(card => {
         card.addEventListener("click", e => {
-          if (e.target.closest(".overrideInput")) return;
+          if (
+            e.target.closest(".overrideInput") ||
+            e.target.closest(".directToggleBtn") ||
+            e.target.closest(".itemCheck")
+          ) {
+            return;
+          }
+
           const id = card.dataset.itemId;
           if (selectedIds.has(id)) selectedIds.delete(id);
           else selectedIds.add(id);
+
           renderItems();
         });
       });
 
       renderCustomItems();
       updateSelectedCount();
+    }
+
+    function toggleDirect(id) {
+      if (directEnabled[id]) {
+        delete directEnabled[id];
+        if (priceOverrides[id] && priceOverrides[id].direct !== undefined) {
+          delete priceOverrides[id].direct;
+          if (!priceOverrides[id].oow) {
+            delete priceOverrides[id];
+          }
+        }
+      } else {
+        directEnabled[id] = true;
+      }
+      renderItems();
     }
 
     function debounce(fn, wait = 250) {
@@ -1196,15 +1264,22 @@
       generateBtn.textContent = "Generating...";
 
       try {
+        const itemsPayload = Array.from(selectedIds).map(id => ({
+          id,
+          oow_price: priceOverrides[id]?.oow || null,
+          direct_price: directEnabled[id] ? (priceOverrides[id]?.direct || null) : null,
+          show_direct: !!directEnabled[id],
+          show_oow: true
+        }));
+
         const payload = {
           customer_name: customerNameEl.value.trim(),
           program: programNameEl.value.trim() || "TEST",
           effective_date: effectiveDateEl.value || "",
-          price_mode: priceModeEl.value,
-          item_ids: Array.from(selectedIds),
+          price_mode: priceModeEl.value || "oow",
+          items: itemsPayload,
           custom_items: customItems,
-          customer_logo_data: customerLogoData,
-          price_overrides: priceOverrides
+          customer_logo_data: customerLogoData
         };
 
         const res = await apiFetch(`${API_BASE}/generate`, {
@@ -1245,9 +1320,15 @@
     function clearSelected() {
       selectedIds = new Set();
       priceOverrides = {};
+      directEnabled = {};
       customItems = [];
       clearCustomInputs();
-      renderItems();
+
+      if (currentItems.length) {
+        renderItems();
+      } else {
+        renderIdleState();
+      }
     }
 
     async function tryLogin(password) {
@@ -1306,7 +1387,11 @@
 
     categoryEl.addEventListener("change", fetchItems);
     searchEl.addEventListener("input", debounce(fetchItems, 250));
-    priceModeEl.addEventListener("change", renderItems);
+    priceModeEl.addEventListener("change", () => {
+      if (currentItems.length) {
+        renderItems();
+      }
+    });
 
     addCustomBtn.addEventListener("click", addCustomItem);
     refreshBtn.addEventListener("click", fetchItems);
@@ -1342,6 +1427,7 @@
       clearSavedPassword();
       selectedIds = new Set();
       priceOverrides = {};
+      directEnabled = {};
       currentItems = [];
       customItems = [];
       itemsWrapEl.innerHTML = `<div class="empty">Enter password to load products.</div>`;

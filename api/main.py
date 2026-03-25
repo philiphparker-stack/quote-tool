@@ -65,15 +65,29 @@ class CustomItemReq(BaseModel):
     price: Optional[float] = None
 
 
+class SelectedItemReq(BaseModel):
+    id: str
+    oow_price: Optional[Any] = None
+    direct_price: Optional[Any] = None
+    show_direct: Optional[bool] = False
+    show_oow: Optional[bool] = True
+
+
 class GenerateReq(BaseModel):
     program: str = "TEST"
     customer_name: Optional[str] = None
     effective_date: Optional[str] = None
-    price_mode: str = "direct"
+
+    # Legacy support
+    price_mode: Optional[str] = "direct"
     item_ids: List[str] = []
+    price_overrides: Optional[Dict[str, Any]] = None
+
+    # New per-item pricing support
+    items: Optional[List[SelectedItemReq]] = None
+
     custom_items: Optional[List[CustomItemReq]] = None
     customer_logo_data: Optional[str] = None
-    price_overrides: Optional[Dict[str, Any]] = None
 
 
 # ============================================================
@@ -147,7 +161,7 @@ def build_filters(items: List[Dict[str, Any]]) -> Dict[str, Any]:
 # ============================================================
 def normalize_search_text(s: Any) -> str:
     s = norm(s).lower()
-    s = s.replace('"', ' ')
+    s = s.replace('"', " ")
     s = s.replace("'", " ")
     s = s.replace("/", " ")
     s = s.replace("-", " ")
@@ -277,6 +291,18 @@ def category_sort_key(cat: str) -> int:
 # ============================================================
 # Price helpers
 # ============================================================
+def try_float(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    s = str(value).strip()
+    if not s:
+        return None
+    try:
+        return float(s.replace("$", "").replace(",", ""))
+    except Exception:
+        return None
+
+
 def get_numeric_price(it: Dict[str, Any], mode: str) -> Optional[float]:
     if "_override_price" in it and it["_override_price"] is not None:
         try:
@@ -293,12 +319,47 @@ def get_numeric_price(it: Dict[str, Any], mode: str) -> Optional[float]:
         return None
 
 
-def fmt_price(it: Dict[str, Any], mode: str) -> str:
-    price_val = get_numeric_price(it, mode)
-    uom = norm(it.get("uom") or "ea")
-    if price_val is None:
+def fmt_single_price(label: str, value: Optional[float], uom: str) -> str:
+    if value is None:
         return ""
-    return f"${price_val:.2f}/{uom}"
+    return f"{label}: ${value:.2f}/{uom}"
+
+
+def get_price_lines(it: Dict[str, Any], legacy_mode: str) -> List[str]:
+    uom = norm(it.get("uom") or "ea")
+
+    # New per-item dual pricing mode
+    if "_pricing_mode" in it and it["_pricing_mode"] == "per_item":
+        show_oow = bool(it.get("_show_oow", True))
+        show_direct = bool(it.get("_show_direct", False))
+
+        oow_price = try_float(it.get("_override_oow_price"))
+        if oow_price is None:
+            oow_price = try_float(it.get("price_oow"))
+
+        direct_price = try_float(it.get("_override_direct_price"))
+        if direct_price is None:
+            direct_price = try_float(it.get("price_direct"))
+
+        lines: List[str] = []
+        if show_oow:
+            txt = fmt_single_price("OOW", oow_price, uom)
+            if txt:
+                lines.append(txt)
+        if show_direct:
+            txt = fmt_single_price("Direct", direct_price, uom)
+            if txt:
+                lines.append(txt)
+
+        return lines
+
+    # Legacy single price mode
+    price_val = get_numeric_price(it, legacy_mode)
+    if price_val is None:
+        return []
+
+    label = "Direct" if legacy_mode == "direct" else "OOW"
+    return [fmt_single_price(label, price_val, uom)]
 
 
 # ============================================================
@@ -648,23 +709,24 @@ def draw_card(
         c.drawString(inner_x, title_y - (i * (title_size + 1.2)), line)
 
     title_block_h = max(1, len(title_lines)) * (title_size + 1.2)
-    price_y = title_y - title_block_h - 6
+    price_start_y = title_y - title_block_h - 6
 
-    price_txt, price_size = fit_one_line(
-        c,
-        fmt_price(it, mode),
-        inner_w,
-        "Helvetica-Bold",
-        start_size=12.8,
-        min_size=8.8,
-    )
+    price_lines = get_price_lines(it, mode)
+    price_size = 8.4 if len(price_lines) > 1 else 10.4
+    price_gap = price_size + 1.4
+
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", price_size)
-    c.drawString(inner_x, price_y, price_txt)
+    for idx, line in enumerate(price_lines[:2]):
+        c.drawString(inner_x, price_start_y - (idx * price_gap), line)
+
+    price_block_h = len(price_lines[:2]) * price_gap if price_lines else 0
 
     img_size = 36
     img_x = inner_x
-    img_y = y_top - card_h + 16
+
+    extra_price_space = max(0, (len(price_lines) - 1) * price_gap)
+    img_y = y_top - card_h + 16 - extra_price_space
 
     img_path = resolve_item_image_path(norm(it.get("image")))
     img_reader = get_image_reader_from_path(img_path, max_px=180, quality=55) if img_path else None
@@ -763,7 +825,7 @@ def build_pdf(
 
     usable_w = W - left - right
     card_w = (usable_w - gutter * (cols - 1)) / cols
-    card_h = 92
+    card_h = 100
 
     customer_logo_reader = decode_logo_data(customer_logo_data)
     page_num = 1
@@ -873,6 +935,11 @@ def build_custom_item(custom: CustomItemReq, index_num: int) -> Dict[str, Any]:
         "image": "",
         "aliases": "",
         "search_terms": "",
+        "_pricing_mode": "per_item",
+        "_show_oow": True,
+        "_show_direct": False,
+        "_override_oow_price": price_val,
+        "_override_direct_price": None,
     }
 
 
@@ -943,19 +1010,53 @@ def get_items(
 def generate(request: Request, req: GenerateReq):
     require_password(request)
 
-    mode = norm(req.price_mode).lower()
-    if mode not in ("direct", "oow"):
-        raise HTTPException(status_code=400, detail="price_mode must be 'direct' or 'oow'")
-
     items_map = load_items_map()
-
     picked: List[Dict[str, Any]] = []
 
-    if req.item_ids and items_map:
-        for item_id in req.item_ids:
-            if item_id in items_map:
-                picked.append(dict(items_map[item_id]))
+    # ========================================================
+    # New per-item pricing payload
+    # ========================================================
+    if req.items:
+        for selected in req.items:
+            item_id = norm(selected.id)
+            if item_id not in items_map:
+                continue
 
+            base = dict(items_map[item_id])
+            base["_pricing_mode"] = "per_item"
+            base["_show_oow"] = bool(selected.show_oow if selected.show_oow is not None else True)
+            base["_show_direct"] = bool(selected.show_direct if selected.show_direct is not None else False)
+            base["_override_oow_price"] = try_float(selected.oow_price)
+            base["_override_direct_price"] = try_float(selected.direct_price)
+            picked.append(base)
+
+    # ========================================================
+    # Legacy support
+    # ========================================================
+    elif req.item_ids:
+        mode = norm(req.price_mode).lower()
+        if mode not in ("direct", "oow"):
+            raise HTTPException(status_code=400, detail="price_mode must be 'direct' or 'oow'")
+
+        if items_map:
+            for item_id in req.item_ids:
+                if item_id in items_map:
+                    picked.append(dict(items_map[item_id]))
+
+        overrides = req.price_overrides or {}
+        for it in picked:
+            item_id = norm(it.get("id"))
+            if item_id in overrides:
+                raw = overrides[item_id]
+                try:
+                    if raw is not None and str(raw).strip() != "":
+                        it["_override_price"] = float(str(raw).replace("$", "").replace(",", "").strip())
+                except Exception:
+                    pass
+
+    # ========================================================
+    # Custom items
+    # ========================================================
     custom_items = req.custom_items or []
     for idx, custom in enumerate(custom_items, start=1):
         picked.append(build_custom_item(custom, idx))
@@ -963,20 +1064,14 @@ def generate(request: Request, req: GenerateReq):
     if not picked:
         raise HTTPException(status_code=400, detail="No valid selected items found.")
 
-    overrides = req.price_overrides or {}
-    for it in picked:
-        item_id = norm(it.get("id"))
-        if item_id in overrides:
-            raw = overrides[item_id]
-            try:
-                if raw is not None and str(raw).strip() != "":
-                    it["_override_price"] = float(str(raw).replace("$", "").replace(",", "").strip())
-            except Exception:
-                pass
+    # Determine PDF mode fallback for legacy cards
+    pdf_mode = norm(req.price_mode).lower()
+    if pdf_mode not in ("direct", "oow"):
+        pdf_mode = "oow"
 
     pdf_bytes = build_pdf(
         items=picked,
-        mode=mode,
+        mode=pdf_mode,
         customer_logo_data=req.customer_logo_data,
         program=norm(req.program) or "TEST",
         customer_name=norm(req.customer_name),
