@@ -803,6 +803,7 @@
     let directEnabled = {};
     let customerLogoData = null;
     let customItems = [];
+    let selectedVariants = {};
 
     const imageObserver = ("IntersectionObserver" in window)
       ? new IntersectionObserver((entries, observer) => {
@@ -925,6 +926,27 @@
     function getImageSrc(item) {
       const img = String(item.image || "").trim();
       return img ? `assets/items/${encodeURI(img)}` : COMING_SOON_SRC;
+    }
+
+    function getVariantList(item) {
+      return Array.isArray(item?.variants) ? item.variants : [];
+    }
+
+    function getSelectedVariant(item) {
+      const variants = getVariantList(item);
+      if (!variants.length) return null;
+      const selectedSku = selectedVariants[item.id];
+      return variants.find(v => String(v.sku || "") === String(selectedSku || "")) || variants[0];
+    }
+
+    function getVariantDisplayLabel(variant) {
+      if (!variant) return "";
+      return String(variant.size || "").trim();
+    }
+
+    function getDisplaySku(item) {
+      const selectedVariant = getSelectedVariant(item);
+      return selectedVariant?.sku || item.id || "";
     }
 
     function updateSelectedCount() {
@@ -1050,6 +1072,9 @@
         const oowVal = priceOverrides[item.id]?.oow ?? "";
         const directVal = priceOverrides[item.id]?.direct ?? "";
         const isDirect = !!directEnabled[item.id];
+        const variants = getVariantList(item);
+        const activeSku = getDisplaySku(item);
+        const activeVariant = getSelectedVariant(item);
 
         return `
           <div class="itemCard ${checked ? "selected" : ""}" data-item-id="${escapeHtml(item.id)}">
@@ -1071,8 +1096,25 @@
             <div class="itemBody">
               <div class="itemName">${escapeHtml(item.name)}</div>
               <div class="itemMeta">${escapeHtml(item.manufacturer || "")}</div>
-              <div class="itemMeta">${escapeHtml(item.id || "")}</div>
               <div class="itemMeta">${escapeHtml(item.category || "")}</div>
+              <div class="itemMeta">SKU: ${escapeHtml(activeSku)}</div>
+
+              ${variants.length ? `
+                <div class="overrideRow">
+                  <label for="variant_${escapeHtml(item.id)}">Size</label>
+                  <select
+                    id="variant_${escapeHtml(item.id)}"
+                    class="variantSelect"
+                    data-id="${escapeHtml(item.id)}"
+                  >
+                    ${variants.map(v => `
+                      <option value="${escapeHtml(v.sku || "")}" ${(activeVariant?.sku || "") === (v.sku || "") ? "selected" : ""}>
+                        ${escapeHtml(getVariantDisplayLabel(v))}
+                      </option>
+                    `).join("")}
+                  </select>
+                </div>
+              ` : ""}
 
               <div class="overrideRow">
                 <label for="oow_${escapeHtml(item.id)}">OOW</label>
@@ -1127,6 +1169,15 @@
         });
       });
 
+      document.querySelectorAll(".variantSelect").forEach(sel => {
+        sel.addEventListener("click", e => e.stopPropagation());
+        sel.addEventListener("change", e => {
+          const id = e.target.dataset.id;
+          selectedVariants[id] = e.target.value;
+          renderItems();
+        });
+      });
+
       document.querySelectorAll(".overrideInput").forEach(inp => {
         inp.addEventListener("click", e => e.stopPropagation());
         inp.addEventListener("input", e => {
@@ -1162,7 +1213,8 @@
           if (
             e.target.closest(".overrideInput") ||
             e.target.closest(".directToggleBtn") ||
-            e.target.closest(".itemCheck")
+            e.target.closest(".itemCheck") ||
+            e.target.closest(".variantSelect")
           ) {
             return;
           }
@@ -1265,7 +1317,7 @@
 
       try {
         const itemsPayload = Array.from(selectedIds).map(id => ({
-          id,
+          id: selectedVariants[id] || id,
           oow_price: priceOverrides[id]?.oow || null,
           direct_price: directEnabled[id] ? (priceOverrides[id]?.direct || null) : null,
           show_direct: !!directEnabled[id],
@@ -1321,6 +1373,7 @@
       selectedIds = new Set();
       priceOverrides = {};
       directEnabled = {};
+      selectedVariants = {};
       customItems = [];
       clearCustomInputs();
 

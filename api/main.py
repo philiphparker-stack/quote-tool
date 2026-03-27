@@ -233,7 +233,7 @@ def filter_items(
         if q and not query_matches_item(q, it):
             continue
 
-        out.append({
+        item_obj = {
             "id": sku,
             "name": name,
             "manufacturer": mfr,
@@ -244,7 +244,14 @@ def filter_items(
             "image": norm(it.get("image")),
             "aliases": norm(it.get("aliases")),
             "search_terms": norm(it.get("search_terms")),
-        })
+        }
+
+        # include variants if present
+        if it.get("has_variants"):
+            item_obj["has_variants"] = True
+            item_obj["variants"] = it.get("variants", [])
+
+        out.append(item_obj)
 
         if len(out) >= limit:
             break
