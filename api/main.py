@@ -233,7 +233,7 @@ def filter_items(
         if q and not query_matches_item(q, it):
             continue
 
-        item_obj = {
+        out.append({
             "id": sku,
             "name": name,
             "manufacturer": mfr,
@@ -244,14 +244,7 @@ def filter_items(
             "image": norm(it.get("image")),
             "aliases": norm(it.get("aliases")),
             "search_terms": norm(it.get("search_terms")),
-        }
-
-        # include variants if present
-        if it.get("has_variants"):
-            item_obj["has_variants"] = True
-            item_obj["variants"] = it.get("variants", [])
-
-        out.append(item_obj)
+        })
 
         if len(out) >= limit:
             break
@@ -264,8 +257,8 @@ def filter_items(
 # ============================================================
 CATEGORY_LABELS = {
     "THINSET": "THINSETS",
-    "GROUT": "GROUTS / CAULKING",
-    "CAULK": "GROUTS / CAULKING",
+    "GROUT": "GROUTS",
+    "CAULK": "CAULK",
     "ADHESIVE": "ADHESIVES",
     "BACKERBOARD": "BACKERBOARD",
     "TRIM": "TRIMS / METALS",
@@ -274,14 +267,10 @@ CATEGORY_LABELS = {
 }
 
 CATEGORY_ORDER = {
-    "BACKERBOARD": 10,
-    "THINSET": 20,
-    "GROUT": 30,
-    "CAULK": 31,
-    "ADHESIVE": 40,
-    "MASTIC": 41,
-    "TRIM": 50,
-    "DRAINS": 60,
+    "THINSET": 10,
+    "GROUT": 20,
+    "CAULK": 30,
+    "TRIM": 40,
 }
 
 
@@ -335,7 +324,6 @@ def fmt_single_price(label: str, value: Optional[float], uom: str) -> str:
 def get_price_lines(it: Dict[str, Any], legacy_mode: str) -> List[str]:
     uom = norm(it.get("uom") or "ea")
 
-    # New per-item dual pricing mode
     if "_pricing_mode" in it and it["_pricing_mode"] == "per_item":
         show_oow = bool(it.get("_show_oow", True))
         show_direct = bool(it.get("_show_direct", False))
@@ -360,7 +348,6 @@ def get_price_lines(it: Dict[str, Any], legacy_mode: str) -> List[str]:
 
         return lines
 
-    # Legacy single price mode
     price_val = get_numeric_price(it, legacy_mode)
     if price_val is None:
         return []
@@ -727,8 +714,6 @@ def draw_card(
     for idx, line in enumerate(price_lines[:2]):
         c.drawString(inner_x, price_start_y - (idx * price_gap), line)
 
-    price_block_h = len(price_lines[:2]) * price_gap if price_lines else 0
-
     img_size = 36
     img_x = inner_x
 
@@ -769,7 +754,7 @@ def draw_card(
     )
 
     line_gap = 0.8
-    mfr_start_y = img_y + 22
+    mfr_start_y = img_y + 18
 
     c.setFillColor(SOFT_TEXT)
     c.setFont("Helvetica", mfr_size)
@@ -811,6 +796,41 @@ def group_items_for_pdf(items: List[Dict[str, Any]]) -> List[Tuple[str, List[Dic
     return [(cat, grouped[cat]) for cat in ordered_cats]
 
 
+def is_small_group(items: List[Dict[str, Any]]) -> bool:
+    return len(items) <= 2
+
+
+def estimate_small_section_height(num_items: int, card_h: float, row_gap: float) -> float:
+    header_h = 18
+    if num_items <= 0:
+        return header_h + 8
+    cards_block = (num_items * card_h) + ((num_items - 1) * row_gap)
+    return header_h + 8 + cards_block
+
+
+def draw_small_category_section(
+    c: canvas.Canvas,
+    x: float,
+    y_top: float,
+    section_w: float,
+    cat_key: str,
+    cat_items: List[Dict[str, Any]],
+    mode: str,
+    card_h: float,
+    row_gap: float,
+):
+    label = pretty_category(cat_key)
+    header_h = draw_category_header(c, x, y_top, section_w, label)
+    y = y_top - (header_h + 8)
+
+    for it in cat_items:
+        draw_card(c, x, y, section_w, card_h, it, mode)
+        y -= (card_h + row_gap)
+
+    used_height = estimate_small_section_height(len(cat_items), card_h, row_gap)
+    return used_height
+
+
 def build_pdf(
     items: List[Dict[str, Any]],
     mode: str,
@@ -828,11 +848,14 @@ def build_pdf(
     right = 30
     bottom = 34
     gutter = 8
+    section_gap = 12
     row_gap = 9
 
     usable_w = W - left - right
     card_w = (usable_w - gutter * (cols - 1)) / cols
-    card_h = 100
+    card_h = 112
+
+    small_section_w = (usable_w - section_gap) / 2
 
     customer_logo_reader = decode_logo_data(customer_logo_data)
     page_num = 1
@@ -850,7 +873,7 @@ def build_pdf(
 
     groups = group_items_for_pdf(items)
 
-    min_section_space = 18 + 8 + card_h + row_gap
+    min_full_section_space = 18 + 8 + card_h + row_gap
 
     def new_page():
         nonlocal y, page_num, header_divider_y
@@ -868,12 +891,71 @@ def build_pdf(
         )
         y = header_divider_y - 10
 
-    for cat_key, cat_items in groups:
-        label = pretty_category(cat_key)
+    i = 0
+    while i < len(groups):
+        cat_key, cat_items = groups[i]
 
-        if y - min_section_space < bottom:
+        # ----------------------------------------------------
+        # Pair small groups side-by-side
+        # ----------------------------------------------------
+        if is_small_group(cat_items):
+            next_pair = None
+            if i + 1 < len(groups):
+                next_cat_key, next_cat_items = groups[i + 1]
+                if is_small_group(next_cat_items):
+                    next_pair = (next_cat_key, next_cat_items)
+
+            left_height = estimate_small_section_height(len(cat_items), card_h, row_gap)
+            right_height = 0
+            if next_pair:
+                right_height = estimate_small_section_height(len(next_pair[1]), card_h, row_gap)
+
+            needed_height = max(left_height, right_height if next_pair else 0)
+
+            if y - needed_height < bottom:
+                new_page()
+
+            used_left = draw_small_category_section(
+                c=c,
+                x=left,
+                y_top=y,
+                section_w=small_section_w,
+                cat_key=cat_key,
+                cat_items=cat_items,
+                mode=mode,
+                card_h=card_h,
+                row_gap=row_gap,
+            )
+
+            used_right = 0
+            if next_pair:
+                used_right = draw_small_category_section(
+                    c=c,
+                    x=left + small_section_w + section_gap,
+                    y_top=y,
+                    section_w=small_section_w,
+                    cat_key=next_pair[0],
+                    cat_items=next_pair[1],
+                    mode=mode,
+                    card_h=card_h,
+                    row_gap=row_gap,
+                )
+
+            y -= max(used_left, used_right if next_pair else 0) + 6
+
+            if next_pair:
+                i += 2
+            else:
+                i += 1
+            continue
+
+        # ----------------------------------------------------
+        # Full-width categories
+        # ----------------------------------------------------
+        if y - min_full_section_space < bottom:
             new_page()
 
+        label = pretty_category(cat_key)
         header_h = draw_category_header(c, left, y, usable_w, label)
         y -= (header_h + 8)
 
@@ -883,7 +965,7 @@ def build_pdf(
         for it in cat_items:
             if col == 0 and (y - card_h) < bottom:
                 new_page()
-                if y - min_section_space < bottom:
+                if y - min_full_section_space < bottom:
                     new_page()
                 header_h = draw_category_header(c, left, y, usable_w, label + " (cont.)")
                 y -= (header_h + 8)
@@ -902,6 +984,8 @@ def build_pdf(
             y -= (card_h + row_gap)
         else:
             y -= 4
+
+        i += 1
 
     draw_page_footer(c, W, page_num)
 
@@ -1020,9 +1104,6 @@ def generate(request: Request, req: GenerateReq):
     items_map = load_items_map()
     picked: List[Dict[str, Any]] = []
 
-    # ========================================================
-    # New per-item pricing payload
-    # ========================================================
     if req.items:
         for selected in req.items:
             item_id = norm(selected.id)
@@ -1037,9 +1118,6 @@ def generate(request: Request, req: GenerateReq):
             base["_override_direct_price"] = try_float(selected.direct_price)
             picked.append(base)
 
-    # ========================================================
-    # Legacy support
-    # ========================================================
     elif req.item_ids:
         mode = norm(req.price_mode).lower()
         if mode not in ("direct", "oow"):
@@ -1061,9 +1139,6 @@ def generate(request: Request, req: GenerateReq):
                 except Exception:
                     pass
 
-    # ========================================================
-    # Custom items
-    # ========================================================
     custom_items = req.custom_items or []
     for idx, custom in enumerate(custom_items, start=1):
         picked.append(build_custom_item(custom, idx))
@@ -1071,7 +1146,6 @@ def generate(request: Request, req: GenerateReq):
     if not picked:
         raise HTTPException(status_code=400, detail="No valid selected items found.")
 
-    # Determine PDF mode fallback for legacy cards
     pdf_mode = norm(req.price_mode).lower()
     if pdf_mode not in ("direct", "oow"):
         pdf_mode = "oow"
