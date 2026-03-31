@@ -11,6 +11,19 @@
     "aliases": "",
     "search_terms": "ACCESSORIES TEC ZTE153030102 4080 FIRST DEFENSE 1 GAL JUG"
   },
+ {
+    "id": "ZLC0209-0060-21",
+    "name": "LATICRETE 209 FLOOR MUD",
+    "manufacturer": "LATICRETE",
+    "category": "MUD BED MORTAR",
+    "uom": "ea",
+    "price_direct": 183.0,
+    "price_oow": 329.4,
+    "image": "laticrete/floormudlaticrete.webp",
+    "aliases": "",
+    "search_terms": "MUD BED MORTAR LATICRETE ZLC0209-0060-21 LATICRETE 209 FLOOR MUD"
+  },
+  
   {
     "id": "ZTE3640800005",
     "name": "4080 FIRST DEFENSE 5 GALLON",
