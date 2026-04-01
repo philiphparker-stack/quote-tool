@@ -855,7 +855,7 @@ def group_items_for_pdf(items: List[Dict[str, Any]]) -> List[Tuple[str, List[Dic
 
 
 def is_small_group(items: List[Dict[str, Any]]) -> bool:
-    return len(items) <= 2
+    return len(items) == 1
 
 
 def estimate_small_section_height(num_items: int, card_h: float, row_gap: float) -> float:
@@ -886,6 +886,33 @@ def draw_small_category_section(
         y -= (card_h + row_gap)
 
     return estimate_small_section_height(len(cat_items), card_h, row_gap)
+
+
+def draw_two_up_category_section(
+    c: canvas.Canvas,
+    x: float,
+    y_top: float,
+    section_w: float,
+    cat_key: str,
+    cat_items: List[Dict[str, Any]],
+    fallback_mode: str,
+    card_h: float,
+    gutter: float,
+):
+    label = pretty_category(cat_key)
+    header_h = draw_category_header(c, x, y_top, section_w, label)
+    y = y_top - (header_h + 8)
+
+    two_card_w = (section_w - gutter) / 2
+
+    if len(cat_items) >= 1:
+        draw_card(c, x, y, two_card_w, card_h, cat_items[0], fallback_mode)
+
+    if len(cat_items) >= 2:
+        draw_card(c, x + two_card_w + gutter, y, two_card_w, card_h, cat_items[1], fallback_mode)
+
+    used_height = header_h + 8 + card_h
+    return used_height
 
 
 def build_pdf_grid(
@@ -947,6 +974,34 @@ def build_pdf_grid(
     while i < len(groups):
         cat_key, cat_items = groups[i]
 
+        # ----------------------------------------------------
+        # Two-item categories = same category, side-by-side
+        # ----------------------------------------------------
+        if len(cat_items) == 2:
+            needed_height = 18 + 8 + card_h
+
+            if y - needed_height < bottom:
+                new_page()
+
+            used_height = draw_two_up_category_section(
+                c=c,
+                x=left,
+                y_top=y,
+                section_w=usable_w,
+                cat_key=cat_key,
+                cat_items=cat_items,
+                fallback_mode=fallback_mode,
+                card_h=card_h,
+                gutter=gutter,
+            )
+
+            y -= used_height + 6
+            i += 1
+            continue
+
+        # ----------------------------------------------------
+        # One-item categories can pair side-by-side
+        # ----------------------------------------------------
         if is_small_group(cat_items):
             next_pair = None
             if i + 1 < len(groups):
@@ -998,6 +1053,9 @@ def build_pdf_grid(
                 i += 1
             continue
 
+        # ----------------------------------------------------
+        # Full-width categories
+        # ----------------------------------------------------
         if y - min_full_section_space < bottom:
             new_page()
 
