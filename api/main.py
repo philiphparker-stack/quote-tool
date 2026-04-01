@@ -221,33 +221,33 @@ def filter_items(
 
     out = []
     for it in items:
-      mfr = norm(it.get("manufacturer") or it.get("mfr") or it.get("brand"))
-      cat = norm(it.get("category"))
-      name = norm(it.get("name"))
-      sku = norm(it.get("id") or it.get("sku"))
+        mfr = norm(it.get("manufacturer") or it.get("mfr") or it.get("brand"))
+        cat = norm(it.get("category"))
+        name = norm(it.get("name"))
+        sku = norm(it.get("id") or it.get("sku"))
 
-      if manufacturer and mfr.lower() != manufacturer.lower():
-          continue
-      if category and cat.lower() != category.lower():
-          continue
-      if q and not query_matches_item(q, it):
-          continue
+        if manufacturer and mfr.lower() != manufacturer.lower():
+            continue
+        if category and cat.lower() != category.lower():
+            continue
+        if q and not query_matches_item(q, it):
+            continue
 
-      out.append({
-          "id": sku,
-          "name": name,
-          "manufacturer": mfr,
-          "category": cat,
-          "uom": norm(it.get("uom") or "ea"),
-          "price_direct": it.get("price_direct"),
-          "price_oow": it.get("price_oow"),
-          "image": norm(it.get("image")),
-          "aliases": norm(it.get("aliases")),
-          "search_terms": norm(it.get("search_terms")),
-      })
+        out.append({
+            "id": sku,
+            "name": name,
+            "manufacturer": mfr,
+            "category": cat,
+            "uom": norm(it.get("uom") or "ea"),
+            "price_direct": it.get("price_direct"),
+            "price_oow": it.get("price_oow"),
+            "image": norm(it.get("image")),
+            "aliases": norm(it.get("aliases")),
+            "search_terms": norm(it.get("search_terms")),
+        })
 
-      if len(out) >= limit:
-          break
+        if len(out) >= limit:
+            break
 
     return out
 
@@ -779,10 +779,10 @@ def draw_compact_row(
     c.setFillColor(colors.white)
     c.rect(x, y_top - row_h, width, row_h, stroke=1, fill=1)
 
-    img_x = x + 6
-    img_y = y_top - row_h + 6
-    img_w = 30
-    img_h = row_h - 12
+    img_x = x + 8
+    img_w = 26
+    img_h = 26
+    img_y = y_top - ((row_h + img_h) / 2)
 
     img_path = resolve_item_image_path(norm(it.get("image")))
     img_reader = get_image_reader_from_path(img_path, max_px=120, quality=55) if img_path else None
@@ -809,23 +809,25 @@ def draw_compact_row(
     mfr_x = x + 382
     price_x = x + 490
 
+    text_y = y_top - 21
+
     c.setFillColor(BRAND_BLUE_DARK)
     name_txt, name_size = fit_one_line(c, norm(it.get("name")), 238, "Helvetica-Bold", 9.0, 6.0)
     c.setFont("Helvetica-Bold", name_size)
-    c.drawString(name_x, y_top - 14, name_txt)
+    c.drawString(name_x, text_y, name_txt)
 
     c.setFillColor(colors.Color(0, 0, 0, alpha=0.74))
     c.setFont("Helvetica", 7.3)
     sku_txt, _ = fit_one_line(c, norm(it.get("id")), 84, "Helvetica", 7.3, 6.0)
-    c.drawString(sku_x, y_top - 14, sku_txt)
+    c.drawString(sku_x, text_y, sku_txt)
 
     mfr_txt, _ = fit_one_line(c, norm(it.get("manufacturer")), 100, "Helvetica", 7.3, 6.0)
-    c.drawString(mfr_x, y_top - 14, mfr_txt)
+    c.drawString(mfr_x, text_y, mfr_txt)
 
     price_lines = get_price_lines(it, fallback_mode)
     c.setFont("Helvetica-Bold", 7.3)
     c.setFillColor(colors.black)
-    price_y = y_top - 14
+    price_y = text_y
     for line in price_lines[:2]:
         draw_txt, _ = fit_one_line(c, line, 86, "Helvetica-Bold", 7.3, 6.0)
         c.drawString(price_x, price_y, draw_txt)
@@ -1055,6 +1057,7 @@ def build_pdf_compact(
     bottom = 34
     usable_w = W - left - right
     row_gap = 4
+    row_h = 50
 
     customer_logo_reader = decode_logo_data(customer_logo_data)
     page_num = 1
@@ -1088,15 +1091,12 @@ def build_pdf_compact(
         label = pretty_category(cat_key)
 
         section_header_h = 18
-        first_row_h = 46
-
-        if y - (section_header_h + 8 + first_row_h) < bottom:
+        if y - (section_header_h + 8 + row_h) < bottom:
             new_page()
 
         draw_category_header(c, left, y, usable_w, label)
         y -= (section_header_h + 8)
 
-        # column headings
         c.setFont("Helvetica-Bold", 7.2)
         c.setFillColor(SOFT_TEXT)
         c.drawString(left + 44, y - 2, "Description")
@@ -1106,9 +1106,6 @@ def build_pdf_compact(
         y -= 10
 
         for it in cat_items:
-            price_lines = get_price_lines(it, fallback_mode)
-            row_h = 46 if len(price_lines) <= 1 else 54
-
             if y - row_h < bottom:
                 new_page()
                 draw_category_header(c, left, y, usable_w, label + " (cont.)")
