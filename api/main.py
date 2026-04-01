@@ -896,6 +896,7 @@ def draw_two_up_category_section(
     cat_key: str,
     cat_items: List[Dict[str, Any]],
     fallback_mode: str,
+    card_w: float,
     card_h: float,
     gutter: float,
 ):
@@ -903,13 +904,14 @@ def draw_two_up_category_section(
     header_h = draw_category_header(c, x, y_top, section_w, label)
     y = y_top - (header_h + 8)
 
-    two_card_w = (section_w - gutter) / 2
+    total_cards_w = (card_w * 2) + gutter
+    start_x = x + ((section_w - total_cards_w) / 2)
 
     if len(cat_items) >= 1:
-        draw_card(c, x, y, two_card_w, card_h, cat_items[0], fallback_mode)
+        draw_card(c, start_x, y, card_w, card_h, cat_items[0], fallback_mode)
 
     if len(cat_items) >= 2:
-        draw_card(c, x + two_card_w + gutter, y, two_card_w, card_h, cat_items[1], fallback_mode)
+        draw_card(c, start_x + card_w + gutter, y, card_w, card_h, cat_items[1], fallback_mode)
 
     used_height = header_h + 8 + card_h
     return used_height
@@ -976,6 +978,7 @@ def build_pdf_grid(
 
         # ----------------------------------------------------
         # Two-item categories = same category, side-by-side
+        # using normal card width
         # ----------------------------------------------------
         if len(cat_items) == 2:
             needed_height = 18 + 8 + card_h
@@ -991,6 +994,7 @@ def build_pdf_grid(
                 cat_key=cat_key,
                 cat_items=cat_items,
                 fallback_mode=fallback_mode,
+                card_w=card_w,
                 card_h=card_h,
                 gutter=gutter,
             )
