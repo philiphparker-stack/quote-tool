@@ -67,23 +67,23 @@ class CustomItemReq(BaseModel):
 
 class SelectedItemReq(BaseModel):
     id: str
+    pricing_mode: Optional[str] = "oow"  # oow / direct / both
     oow_price: Optional[Any] = None
     direct_price: Optional[Any] = None
-    show_direct: Optional[bool] = False
-    show_oow: Optional[bool] = True
 
 
 class GenerateReq(BaseModel):
     program: str = "TEST"
     customer_name: Optional[str] = None
     effective_date: Optional[str] = None
+    layout_mode: Optional[str] = "grid"
 
-    # Legacy support
-    price_mode: Optional[str] = "direct"
+    # legacy support
+    price_mode: Optional[str] = "oow"
     item_ids: List[str] = []
     price_overrides: Optional[Dict[str, Any]] = None
 
-    # New per-item pricing support
+    # new per-item support
     items: Optional[List[SelectedItemReq]] = None
 
     custom_items: Optional[List[CustomItemReq]] = None
@@ -221,33 +221,33 @@ def filter_items(
 
     out = []
     for it in items:
-        mfr = norm(it.get("manufacturer") or it.get("mfr") or it.get("brand"))
-        cat = norm(it.get("category"))
-        name = norm(it.get("name"))
-        sku = norm(it.get("id") or it.get("sku"))
+      mfr = norm(it.get("manufacturer") or it.get("mfr") or it.get("brand"))
+      cat = norm(it.get("category"))
+      name = norm(it.get("name"))
+      sku = norm(it.get("id") or it.get("sku"))
 
-        if manufacturer and mfr.lower() != manufacturer.lower():
-            continue
-        if category and cat.lower() != category.lower():
-            continue
-        if q and not query_matches_item(q, it):
-            continue
+      if manufacturer and mfr.lower() != manufacturer.lower():
+          continue
+      if category and cat.lower() != category.lower():
+          continue
+      if q and not query_matches_item(q, it):
+          continue
 
-        out.append({
-            "id": sku,
-            "name": name,
-            "manufacturer": mfr,
-            "category": cat,
-            "uom": norm(it.get("uom") or "ea"),
-            "price_direct": it.get("price_direct"),
-            "price_oow": it.get("price_oow"),
-            "image": norm(it.get("image")),
-            "aliases": norm(it.get("aliases")),
-            "search_terms": norm(it.get("search_terms")),
-        })
+      out.append({
+          "id": sku,
+          "name": name,
+          "manufacturer": mfr,
+          "category": cat,
+          "uom": norm(it.get("uom") or "ea"),
+          "price_direct": it.get("price_direct"),
+          "price_oow": it.get("price_oow"),
+          "image": norm(it.get("image")),
+          "aliases": norm(it.get("aliases")),
+          "search_terms": norm(it.get("search_terms")),
+      })
 
-        if len(out) >= limit:
-            break
+      if len(out) >= limit:
+          break
 
     return out
 
@@ -300,12 +300,6 @@ def try_float(value: Any) -> Optional[float]:
 
 
 def get_numeric_price(it: Dict[str, Any], mode: str) -> Optional[float]:
-    if "_override_price" in it and it["_override_price"] is not None:
-        try:
-            return float(it["_override_price"])
-        except Exception:
-            pass
-
     raw = it.get("price_direct") if mode == "direct" else it.get("price_oow")
     if raw is None or raw == "":
         return None
@@ -324,10 +318,8 @@ def fmt_single_price(label: str, value: Optional[float], uom: str) -> str:
 def get_price_lines(it: Dict[str, Any], legacy_mode: str) -> List[str]:
     uom = norm(it.get("uom") or "ea")
 
-    if "_pricing_mode" in it and it["_pricing_mode"] == "per_item":
-        show_oow = bool(it.get("_show_oow", True))
-        show_direct = bool(it.get("_show_direct", False))
-
+    pricing_mode = norm(it.get("_pricing_mode")).lower()
+    if pricing_mode in {"oow", "direct", "both"}:
         oow_price = try_float(it.get("_override_oow_price"))
         if oow_price is None:
             oow_price = try_float(it.get("price_oow"))
@@ -337,15 +329,14 @@ def get_price_lines(it: Dict[str, Any], legacy_mode: str) -> List[str]:
             direct_price = try_float(it.get("price_direct"))
 
         lines: List[str] = []
-        if show_oow:
+        if pricing_mode in {"oow", "both"}:
             txt = fmt_single_price("OOW", oow_price, uom)
             if txt:
                 lines.append(txt)
-        if show_direct:
+        if pricing_mode in {"direct", "both"}:
             txt = fmt_single_price("Direct", direct_price, uom)
             if txt:
                 lines.append(txt)
-
         return lines
 
     price_val = get_numeric_price(it, legacy_mode)
@@ -673,7 +664,7 @@ def draw_card(
     card_w: float,
     card_h: float,
     it: Dict[str, Any],
-    mode: str,
+    fallback_mode: str,
 ):
     c.setFillColor(colors.Color(0, 0, 0, alpha=0.05))
     c.roundRect(x + 1.6, y_top - card_h - 1.6, card_w, card_h, 9, stroke=0, fill=1)
@@ -705,7 +696,7 @@ def draw_card(
     title_block_h = max(1, len(title_lines)) * (title_size + 1.2)
     price_start_y = title_y - title_block_h - 6
 
-    price_lines = get_price_lines(it, mode)
+    price_lines = get_price_lines(it, fallback_mode)
     price_size = 8.4 if len(price_lines) > 1 else 10.4
     price_gap = price_size + 1.4
 
@@ -716,7 +707,6 @@ def draw_card(
 
     img_size = 36
     img_x = inner_x
-
     extra_price_space = max(0, (len(price_lines) - 1) * price_gap)
     img_y = y_top - card_h + 16 - extra_price_space
 
@@ -776,6 +766,72 @@ def draw_card(
     c.drawString(meta_x, sku_y, sku_txt)
 
 
+def draw_compact_row(
+    c: canvas.Canvas,
+    x: float,
+    y_top: float,
+    width: float,
+    row_h: float,
+    it: Dict[str, Any],
+    fallback_mode: str,
+):
+    c.setStrokeColor(colors.Color(0, 0, 0, alpha=0.12))
+    c.setFillColor(colors.white)
+    c.rect(x, y_top - row_h, width, row_h, stroke=1, fill=1)
+
+    img_x = x + 6
+    img_y = y_top - row_h + 6
+    img_w = 30
+    img_h = row_h - 12
+
+    img_path = resolve_item_image_path(norm(it.get("image")))
+    img_reader = get_image_reader_from_path(img_path, max_px=120, quality=55) if img_path else None
+
+    if img_reader:
+        try:
+            c.drawImage(
+                img_reader,
+                img_x,
+                img_y,
+                width=img_w,
+                height=img_h,
+                preserveAspectRatio=True,
+                mask="auto",
+                anchor="sw",
+            )
+        except Exception:
+            draw_placeholder_image(c, img_x, img_y, img_w, img_h)
+    else:
+        draw_placeholder_image(c, img_x, img_y, img_w, img_h)
+
+    name_x = x + 44
+    sku_x = x + 290
+    mfr_x = x + 382
+    price_x = x + 490
+
+    c.setFillColor(BRAND_BLUE_DARK)
+    name_txt, name_size = fit_one_line(c, norm(it.get("name")), 238, "Helvetica-Bold", 9.0, 6.0)
+    c.setFont("Helvetica-Bold", name_size)
+    c.drawString(name_x, y_top - 14, name_txt)
+
+    c.setFillColor(colors.Color(0, 0, 0, alpha=0.74))
+    c.setFont("Helvetica", 7.3)
+    sku_txt, _ = fit_one_line(c, norm(it.get("id")), 84, "Helvetica", 7.3, 6.0)
+    c.drawString(sku_x, y_top - 14, sku_txt)
+
+    mfr_txt, _ = fit_one_line(c, norm(it.get("manufacturer")), 100, "Helvetica", 7.3, 6.0)
+    c.drawString(mfr_x, y_top - 14, mfr_txt)
+
+    price_lines = get_price_lines(it, fallback_mode)
+    c.setFont("Helvetica-Bold", 7.3)
+    c.setFillColor(colors.black)
+    price_y = y_top - 14
+    for line in price_lines[:2]:
+        draw_txt, _ = fit_one_line(c, line, 86, "Helvetica-Bold", 7.3, 6.0)
+        c.drawString(price_x, price_y, draw_txt)
+        price_y -= 9
+
+
 def group_items_for_pdf(items: List[Dict[str, Any]]) -> List[Tuple[str, List[Dict[str, Any]]]]:
     items_sorted = sorted(
         items,
@@ -815,7 +871,7 @@ def draw_small_category_section(
     section_w: float,
     cat_key: str,
     cat_items: List[Dict[str, Any]],
-    mode: str,
+    fallback_mode: str,
     card_h: float,
     row_gap: float,
 ):
@@ -824,16 +880,15 @@ def draw_small_category_section(
     y = y_top - (header_h + 8)
 
     for it in cat_items:
-        draw_card(c, x, y, section_w, card_h, it, mode)
+        draw_card(c, x, y, section_w, card_h, it, fallback_mode)
         y -= (card_h + row_gap)
 
-    used_height = estimate_small_section_height(len(cat_items), card_h, row_gap)
-    return used_height
+    return estimate_small_section_height(len(cat_items), card_h, row_gap)
 
 
-def build_pdf(
+def build_pdf_grid(
     items: List[Dict[str, Any]],
-    mode: str,
+    fallback_mode: str,
     customer_logo_data: Optional[str] = None,
     program: str = "TEST",
     customer_name: str = "",
@@ -861,9 +916,7 @@ def build_pdf(
     page_num = 1
 
     header_divider_y = draw_header(
-        c,
-        W,
-        H,
+        c, W, H,
         program=program,
         effective_date=effective_date,
         customer_name=customer_name,
@@ -872,7 +925,6 @@ def build_pdf(
     y = header_divider_y - 10
 
     groups = group_items_for_pdf(items)
-
     min_full_section_space = 18 + 8 + card_h + row_gap
 
     def new_page():
@@ -881,9 +933,7 @@ def build_pdf(
         c.showPage()
         page_num += 1
         header_divider_y = draw_header(
-            c,
-            W,
-            H,
+            c, W, H,
             program=program,
             effective_date=effective_date,
             customer_name=customer_name,
@@ -895,9 +945,6 @@ def build_pdf(
     while i < len(groups):
         cat_key, cat_items = groups[i]
 
-        # ----------------------------------------------------
-        # Pair small groups side-by-side
-        # ----------------------------------------------------
         if is_small_group(cat_items):
             next_pair = None
             if i + 1 < len(groups):
@@ -922,7 +969,7 @@ def build_pdf(
                 section_w=small_section_w,
                 cat_key=cat_key,
                 cat_items=cat_items,
-                mode=mode,
+                fallback_mode=fallback_mode,
                 card_h=card_h,
                 row_gap=row_gap,
             )
@@ -936,7 +983,7 @@ def build_pdf(
                     section_w=small_section_w,
                     cat_key=next_pair[0],
                     cat_items=next_pair[1],
-                    mode=mode,
+                    fallback_mode=fallback_mode,
                     card_h=card_h,
                     row_gap=row_gap,
                 )
@@ -949,9 +996,6 @@ def build_pdf(
                 i += 1
             continue
 
-        # ----------------------------------------------------
-        # Full-width categories
-        # ----------------------------------------------------
         if y - min_full_section_space < bottom:
             new_page()
 
@@ -970,7 +1014,7 @@ def build_pdf(
                 header_h = draw_category_header(c, left, y, usable_w, label + " (cont.)")
                 y -= (header_h + 8)
 
-            draw_card(c, x, y, card_w, card_h, it, mode)
+            draw_card(c, x, y, card_w, card_h, it, fallback_mode)
 
             col += 1
             if col == cols:
@@ -988,7 +1032,101 @@ def build_pdf(
         i += 1
 
     draw_page_footer(c, W, page_num)
+    c.save()
+    pdf = buf.getvalue()
+    buf.close()
+    return pdf
 
+
+def build_pdf_compact(
+    items: List[Dict[str, Any]],
+    fallback_mode: str,
+    customer_logo_data: Optional[str] = None,
+    program: str = "TEST",
+    customer_name: str = "",
+    effective_date: str = "",
+) -> bytes:
+    buf = BytesIO()
+    c = canvas.Canvas(buf, pagesize=letter, pageCompression=1)
+    W, H = letter
+
+    left = 30
+    right = 30
+    bottom = 34
+    usable_w = W - left - right
+    row_gap = 4
+
+    customer_logo_reader = decode_logo_data(customer_logo_data)
+    page_num = 1
+
+    header_divider_y = draw_header(
+        c, W, H,
+        program=program,
+        effective_date=effective_date,
+        customer_name=customer_name,
+        customer_logo_reader=customer_logo_reader,
+    )
+
+    y = header_divider_y - 10
+    groups = group_items_for_pdf(items)
+
+    def new_page():
+        nonlocal y, page_num, header_divider_y
+        draw_page_footer(c, W, page_num)
+        c.showPage()
+        page_num += 1
+        header_divider_y = draw_header(
+            c, W, H,
+            program=program,
+            effective_date=effective_date,
+            customer_name=customer_name,
+            customer_logo_reader=customer_logo_reader,
+        )
+        y = header_divider_y - 10
+
+    for cat_key, cat_items in groups:
+        label = pretty_category(cat_key)
+
+        section_header_h = 18
+        first_row_h = 46
+
+        if y - (section_header_h + 8 + first_row_h) < bottom:
+            new_page()
+
+        draw_category_header(c, left, y, usable_w, label)
+        y -= (section_header_h + 8)
+
+        # column headings
+        c.setFont("Helvetica-Bold", 7.2)
+        c.setFillColor(SOFT_TEXT)
+        c.drawString(left + 44, y - 2, "Description")
+        c.drawString(left + 290, y - 2, "SKU")
+        c.drawString(left + 382, y - 2, "Manufacturer")
+        c.drawString(left + 490, y - 2, "Pricing")
+        y -= 10
+
+        for it in cat_items:
+            price_lines = get_price_lines(it, fallback_mode)
+            row_h = 46 if len(price_lines) <= 1 else 54
+
+            if y - row_h < bottom:
+                new_page()
+                draw_category_header(c, left, y, usable_w, label + " (cont.)")
+                y -= (section_header_h + 8)
+                c.setFont("Helvetica-Bold", 7.2)
+                c.setFillColor(SOFT_TEXT)
+                c.drawString(left + 44, y - 2, "Description")
+                c.drawString(left + 290, y - 2, "SKU")
+                c.drawString(left + 382, y - 2, "Manufacturer")
+                c.drawString(left + 490, y - 2, "Pricing")
+                y -= 10
+
+            draw_compact_row(c, left, y, usable_w, row_h, it, fallback_mode)
+            y -= (row_h + row_gap)
+
+        y -= 4
+
+    draw_page_footer(c, W, page_num)
     c.save()
     pdf = buf.getvalue()
     buf.close()
@@ -1021,14 +1159,12 @@ def build_custom_item(custom: CustomItemReq, index_num: int) -> Dict[str, Any]:
         "manufacturer": manufacturer,
         "category": category,
         "uom": uom,
-        "price_direct": price_val,
+        "price_direct": None,
         "price_oow": price_val,
         "image": "",
         "aliases": "",
         "search_terms": "",
-        "_pricing_mode": "per_item",
-        "_show_oow": True,
-        "_show_direct": False,
+        "_pricing_mode": "oow",
         "_override_oow_price": price_val,
         "_override_direct_price": None,
     }
@@ -1111,33 +1247,32 @@ def generate(request: Request, req: GenerateReq):
                 continue
 
             base = dict(items_map[item_id])
-            base["_pricing_mode"] = "per_item"
-            base["_show_oow"] = bool(selected.show_oow if selected.show_oow is not None else True)
-            base["_show_direct"] = bool(selected.show_direct if selected.show_direct is not None else False)
+            pricing_mode = norm(selected.pricing_mode).lower()
+            if pricing_mode not in {"oow", "direct", "both"}:
+                pricing_mode = "oow"
+
+            base["_pricing_mode"] = pricing_mode
             base["_override_oow_price"] = try_float(selected.oow_price)
             base["_override_direct_price"] = try_float(selected.direct_price)
             picked.append(base)
 
     elif req.item_ids:
-        mode = norm(req.price_mode).lower()
-        if mode not in ("direct", "oow"):
-            raise HTTPException(status_code=400, detail="price_mode must be 'direct' or 'oow'")
+        legacy_mode = norm(req.price_mode).lower()
+        if legacy_mode not in ("direct", "oow"):
+            legacy_mode = "oow"
 
-        if items_map:
-            for item_id in req.item_ids:
-                if item_id in items_map:
-                    picked.append(dict(items_map[item_id]))
-
-        overrides = req.price_overrides or {}
-        for it in picked:
-            item_id = norm(it.get("id"))
-            if item_id in overrides:
-                raw = overrides[item_id]
-                try:
-                    if raw is not None and str(raw).strip() != "":
-                        it["_override_price"] = float(str(raw).replace("$", "").replace(",", "").strip())
-                except Exception:
-                    pass
+        for item_id in req.item_ids:
+            if item_id in items_map:
+                base = dict(items_map[item_id])
+                base["_pricing_mode"] = legacy_mode
+                override_raw = (req.price_overrides or {}).get(item_id)
+                if legacy_mode == "oow":
+                    base["_override_oow_price"] = try_float(override_raw)
+                    base["_override_direct_price"] = None
+                else:
+                    base["_override_direct_price"] = try_float(override_raw)
+                    base["_override_oow_price"] = None
+                picked.append(base)
 
     custom_items = req.custom_items or []
     for idx, custom in enumerate(custom_items, start=1):
@@ -1146,18 +1281,32 @@ def generate(request: Request, req: GenerateReq):
     if not picked:
         raise HTTPException(status_code=400, detail="No valid selected items found.")
 
-    pdf_mode = norm(req.price_mode).lower()
-    if pdf_mode not in ("direct", "oow"):
-        pdf_mode = "oow"
+    fallback_mode = norm(req.price_mode).lower()
+    if fallback_mode not in ("direct", "oow"):
+        fallback_mode = "oow"
 
-    pdf_bytes = build_pdf(
-        items=picked,
-        mode=pdf_mode,
-        customer_logo_data=req.customer_logo_data,
-        program=norm(req.program) or "TEST",
-        customer_name=norm(req.customer_name),
-        effective_date=norm(req.effective_date),
-    )
+    layout_mode = norm(req.layout_mode).lower()
+    if layout_mode not in {"grid", "compact"}:
+        layout_mode = "grid"
+
+    if layout_mode == "compact":
+        pdf_bytes = build_pdf_compact(
+            items=picked,
+            fallback_mode=fallback_mode,
+            customer_logo_data=req.customer_logo_data,
+            program=norm(req.program) or "TEST",
+            customer_name=norm(req.customer_name),
+            effective_date=norm(req.effective_date),
+        )
+    else:
+        pdf_bytes = build_pdf_grid(
+            items=picked,
+            fallback_mode=fallback_mode,
+            customer_logo_data=req.customer_logo_data,
+            program=norm(req.program) or "TEST",
+            customer_name=norm(req.customer_name),
+            effective_date=norm(req.effective_date),
+        )
 
     return Response(
         content=pdf_bytes,
