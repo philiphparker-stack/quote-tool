@@ -188,7 +188,7 @@
     }
 
     .pdfTopGrid{
-      grid-template-columns: repeat(4, minmax(150px, 1fr));
+      grid-template-columns: repeat(3, minmax(160px, 1fr));
     }
 
     .customGrid{
@@ -361,7 +361,7 @@
       grid-template-columns: 24px 64px minmax(0, 1fr);
       gap:12px;
       align-items:start;
-      min-height:112px;
+      min-height:160px;
       cursor:pointer;
       box-shadow:0 6px 18px rgba(16,24,40,.04);
       transition:transform .08s ease, box-shadow .08s ease, border-color .08s ease;
@@ -456,18 +456,37 @@
       word-break:break-word;
     }
 
-    .itemPrice{
-      font-size:13px;
-      font-weight:900;
-      margin:7px 0 7px;
-      color:#101828;
+    .pricingModeRow{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      margin-top:7px;
+      flex-wrap:wrap;
+    }
+
+    .pricingModeRow label{
+      font-size:11px;
+      font-weight:800;
+      color:#475467;
+      min-width:46px;
+    }
+
+    .pricingModeRow select{
+      width:auto;
+      min-width:120px;
+      height:28px;
+      border:1px solid #cfd6df;
+      border-radius:9px;
+      padding:0 8px;
+      font-size:12px;
+      background:#fff;
     }
 
     .overrideRow{
       display:flex;
       align-items:center;
       gap:6px;
-      margin-top:4px;
+      margin-top:6px;
       flex-wrap:wrap;
     }
 
@@ -485,10 +504,6 @@
       border-radius:9px;
       padding:0 8px;
       font-size:12px;
-    }
-
-    .pricingToggleRow{
-      margin-top:8px;
     }
 
     .empty{
@@ -538,6 +553,52 @@
     .customRowMeta{
       font-size:11px;
       color:#667085;
+    }
+
+    .modalBackdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(15, 23, 42, .42);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:10000;
+      padding:20px;
+    }
+
+    .modalCard{
+      width:100%;
+      max-width:430px;
+      background:#fff;
+      border:1px solid #d8dee6;
+      border-radius:20px;
+      box-shadow:0 20px 50px rgba(16,24,40,.20);
+      padding:22px 20px 18px;
+    }
+
+    .modalTitle{
+      margin:0 0 6px;
+      font-size:22px;
+      line-height:1.1;
+      font-weight:900;
+      color:var(--brand-dark);
+    }
+
+    .modalSub{
+      margin:0 0 16px;
+      font-size:13px;
+      line-height:1.45;
+      color:var(--muted);
+    }
+
+    .modalActions{
+      display:grid;
+      gap:10px;
+    }
+
+    .modalActions button{
+      width:100%;
+      justify-content:center;
     }
 
     @media (max-width: 1280px){
@@ -599,6 +660,19 @@
       </div>
 
       <div class="authError" id="authError"></div>
+    </div>
+  </div>
+
+  <div class="modalBackdrop" id="layoutModal">
+    <div class="modalCard">
+      <h3 class="modalTitle">Choose PDF Layout</h3>
+      <p class="modalSub">Pick the format you want for this quote.</p>
+
+      <div class="modalActions">
+        <button id="gridLayoutBtn" class="primary" type="button">Grid Layout</button>
+        <button id="compactLayoutBtn" type="button">Compact Layout</button>
+        <button id="cancelLayoutBtn" type="button">Cancel</button>
+      </div>
     </div>
   </div>
 
@@ -705,14 +779,6 @@
             <label for="effectiveDate">Effective Date</label>
             <input id="effectiveDate" type="date" />
           </div>
-
-          <div class="field">
-            <label for="priceMode">Price Mode</label>
-            <select id="priceMode">
-              <option value="oow">OOW</option>
-              <option value="direct">Direct</option>
-            </select>
-          </div>
         </div>
 
         <div class="pdfBottomRow">
@@ -768,12 +834,16 @@
     const logoutBtn = document.getElementById("logoutBtn");
     const authStatusEl = document.getElementById("authStatus");
 
+    const layoutModalEl = document.getElementById("layoutModal");
+    const gridLayoutBtn = document.getElementById("gridLayoutBtn");
+    const compactLayoutBtn = document.getElementById("compactLayoutBtn");
+    const cancelLayoutBtn = document.getElementById("cancelLayoutBtn");
+
     const manufacturerEl = document.getElementById("manufacturer");
     const categoryEl = document.getElementById("category");
     const searchEl = document.getElementById("search");
 
     const customerNameEl = document.getElementById("customerName");
-    const priceModeEl = document.getElementById("priceMode");
     const programNameEl = document.getElementById("programName");
     const effectiveDateEl = document.getElementById("effectiveDate");
 
@@ -799,11 +869,9 @@
     let allFilters = null;
     let currentItems = [];
     let selectedIds = new Set();
-    let priceOverrides = {};
-    let directEnabled = {};
+    let priceConfigs = {};
     let customerLogoData = null;
     let customItems = [];
-    let selectedVariants = {};
 
     const imageObserver = ("IntersectionObserver" in window)
       ? new IntersectionObserver((entries, observer) => {
@@ -827,14 +895,11 @@
 
     function observeLazyImages() {
       const imgs = document.querySelectorAll("img[data-src]");
-
       imgs.forEach(img => {
         if (imageObserver) {
           imageObserver.observe(img);
-        } else {
-          if (!img.src) {
-            img.src = img.dataset.src;
-          }
+        } else if (!img.src) {
+          img.src = img.dataset.src;
         }
       });
     }
@@ -915,38 +980,9 @@
       authStatusEl.classList.add("authUnlocked");
     }
 
-    function fmtPrice(item, mode) {
-      const raw = mode === "direct" ? item.price_direct : item.price_oow;
-      if (raw === null || raw === undefined || raw === "") return "";
-      const num = Number(raw);
-      if (Number.isNaN(num)) return "";
-      return `$${num.toFixed(2)}/${item.uom || "ea"}`;
-    }
-
     function getImageSrc(item) {
       const img = String(item.image || "").trim();
       return img ? `assets/items/${encodeURI(img)}` : COMING_SOON_SRC;
-    }
-
-    function getVariantList(item) {
-      return Array.isArray(item?.variants) ? item.variants : [];
-    }
-
-    function getSelectedVariant(item) {
-      const variants = getVariantList(item);
-      if (!variants.length) return null;
-      const selectedSku = selectedVariants[item.id];
-      return variants.find(v => String(v.sku || "") === String(selectedSku || "")) || variants[0];
-    }
-
-    function getVariantDisplayLabel(variant) {
-      if (!variant) return "";
-      return String(variant.size || "").trim();
-    }
-
-    function getDisplaySku(item) {
-      const selectedVariant = getSelectedVariant(item);
-      return selectedVariant?.sku || item.id || "";
     }
 
     function updateSelectedCount() {
@@ -967,6 +1003,25 @@
       itemsWrapEl.innerHTML = `<div class="empty">Select a manufacturer, choose a category, or type in search to load products.</div>`;
       renderCustomItems();
       updateSelectedCount();
+    }
+
+    function ensurePriceConfig(item) {
+      if (!priceConfigs[item.id]) {
+        priceConfigs[item.id] = {
+          mode: "oow",
+          oow: "",
+          direct: ""
+        };
+      }
+      return priceConfigs[item.id];
+    }
+
+    function openLayoutModal() {
+      layoutModalEl.style.display = "flex";
+    }
+
+    function closeLayoutModal() {
+      layoutModalEl.style.display = "none";
     }
 
     async function fetchFilters() {
@@ -1069,12 +1124,7 @@
 
       const html = currentItems.map(item => {
         const checked = selectedIds.has(item.id);
-        const oowVal = priceOverrides[item.id]?.oow ?? "";
-        const directVal = priceOverrides[item.id]?.direct ?? "";
-        const isDirect = !!directEnabled[item.id];
-        const variants = getVariantList(item);
-        const activeSku = getDisplaySku(item);
-        const activeVariant = getSelectedVariant(item);
+        const cfg = ensurePriceConfig(item);
 
         return `
           <div class="itemCard ${checked ? "selected" : ""}" data-item-id="${escapeHtml(item.id)}">
@@ -1096,61 +1146,49 @@
             <div class="itemBody">
               <div class="itemName">${escapeHtml(item.name)}</div>
               <div class="itemMeta">${escapeHtml(item.manufacturer || "")}</div>
+              <div class="itemMeta">${escapeHtml(item.id || "")}</div>
               <div class="itemMeta">${escapeHtml(item.category || "")}</div>
-              <div class="itemMeta">SKU: ${escapeHtml(activeSku)}</div>
 
-              ${variants.length ? `
+              <div class="pricingModeRow">
+                <label for="mode_${escapeHtml(item.id)}">Pricing</label>
+                <select id="mode_${escapeHtml(item.id)}" class="pricingModeSelect" data-id="${escapeHtml(item.id)}">
+                  <option value="oow" ${cfg.mode === "oow" ? "selected" : ""}>OOW Only</option>
+                  <option value="direct" ${cfg.mode === "direct" ? "selected" : ""}>Direct Only</option>
+                  <option value="both" ${cfg.mode === "both" ? "selected" : ""}>Both</option>
+                </select>
+              </div>
+
+              ${(cfg.mode === "oow" || cfg.mode === "both") ? `
                 <div class="overrideRow">
-                  <label for="variant_${escapeHtml(item.id)}">Size</label>
-                  <select
-                    id="variant_${escapeHtml(item.id)}"
-                    class="variantSelect"
+                  <label for="oow_${escapeHtml(item.id)}">OOW</label>
+                  <input
+                    id="oow_${escapeHtml(item.id)}"
+                    type="text"
+                    class="priceInput"
                     data-id="${escapeHtml(item.id)}"
-                  >
-                    ${variants.map(v => `
-                      <option value="${escapeHtml(v.sku || "")}" ${(activeVariant?.sku || "") === (v.sku || "") ? "selected" : ""}>
-                        ${escapeHtml(getVariantDisplayLabel(v))}
-                      </option>
-                    `).join("")}
-                  </select>
+                    data-type="oow"
+                    inputmode="decimal"
+                    placeholder="ex: 29.50"
+                    value="${escapeHtml(cfg.oow)}"
+                  />
                 </div>
               ` : ""}
 
-              <div class="overrideRow">
-                <label for="oow_${escapeHtml(item.id)}">OOW</label>
-                <input
-                  id="oow_${escapeHtml(item.id)}"
-                  type="text"
-                  class="overrideInput"
-                  data-id="${escapeHtml(item.id)}"
-                  data-type="oow"
-                  inputmode="decimal"
-                  placeholder="ex: 29.50"
-                  value="${escapeHtml(oowVal)}"
-                />
-              </div>
-
-              ${isDirect ? `
+              ${(cfg.mode === "direct" || cfg.mode === "both") ? `
                 <div class="overrideRow">
                   <label for="direct_${escapeHtml(item.id)}">Direct</label>
                   <input
                     id="direct_${escapeHtml(item.id)}"
                     type="text"
-                    class="overrideInput"
+                    class="priceInput"
                     data-id="${escapeHtml(item.id)}"
                     data-type="direct"
                     inputmode="decimal"
                     placeholder="ex: 24.75"
-                    value="${escapeHtml(directVal)}"
+                    value="${escapeHtml(cfg.direct)}"
                   />
                 </div>
               ` : ""}
-
-              <div class="pricingToggleRow">
-                <button class="small directToggleBtn" type="button" data-id="${escapeHtml(item.id)}">
-                  ${isDirect ? "Remove Direct Truck Pricing" : "Add Direct Truck Pricing"}
-                </button>
-              </div>
             </div>
           </div>
         `;
@@ -1169,52 +1207,32 @@
         });
       });
 
-      document.querySelectorAll(".variantSelect").forEach(sel => {
+      document.querySelectorAll(".pricingModeSelect").forEach(sel => {
         sel.addEventListener("click", e => e.stopPropagation());
         sel.addEventListener("change", e => {
           const id = e.target.dataset.id;
-          selectedVariants[id] = e.target.value;
+          ensurePriceConfig({ id });
+          priceConfigs[id].mode = e.target.value;
           renderItems();
         });
       });
 
-      document.querySelectorAll(".overrideInput").forEach(inp => {
+      document.querySelectorAll(".priceInput").forEach(inp => {
         inp.addEventListener("click", e => e.stopPropagation());
         inp.addEventListener("input", e => {
           const id = e.target.dataset.id;
           const type = e.target.dataset.type;
-          const val = e.target.value;
-
-          if (!priceOverrides[id]) {
-            priceOverrides[id] = {};
-          }
-
-          if (val.trim() === "") {
-            delete priceOverrides[id][type];
-            if (!priceOverrides[id].oow && !priceOverrides[id].direct) {
-              delete priceOverrides[id];
-            }
-          } else {
-            priceOverrides[id][type] = val;
-          }
-        });
-      });
-
-      document.querySelectorAll(".directToggleBtn").forEach(btn => {
-        btn.addEventListener("click", e => {
-          e.stopPropagation();
-          const id = btn.dataset.id;
-          toggleDirect(id);
+          ensurePriceConfig({ id });
+          priceConfigs[id][type] = e.target.value;
         });
       });
 
       document.querySelectorAll(".itemCard").forEach(card => {
         card.addEventListener("click", e => {
           if (
-            e.target.closest(".overrideInput") ||
-            e.target.closest(".directToggleBtn") ||
-            e.target.closest(".itemCheck") ||
-            e.target.closest(".variantSelect")
+            e.target.closest(".priceInput") ||
+            e.target.closest(".pricingModeSelect") ||
+            e.target.closest(".itemCheck")
           ) {
             return;
           }
@@ -1222,28 +1240,12 @@
           const id = card.dataset.itemId;
           if (selectedIds.has(id)) selectedIds.delete(id);
           else selectedIds.add(id);
-
           renderItems();
         });
       });
 
       renderCustomItems();
       updateSelectedCount();
-    }
-
-    function toggleDirect(id) {
-      if (directEnabled[id]) {
-        delete directEnabled[id];
-        if (priceOverrides[id] && priceOverrides[id].direct !== undefined) {
-          delete priceOverrides[id].direct;
-          if (!priceOverrides[id].oow) {
-            delete priceOverrides[id];
-          }
-        }
-      } else {
-        directEnabled[id] = true;
-      }
-      renderItems();
     }
 
     function debounce(fn, wait = 250) {
@@ -1306,30 +1308,35 @@
     window.handleLazyImageLoad = handleLazyImageLoad;
     window.handleLazyImageError = handleLazyImageError;
 
-    async function handleGenerate() {
+    function buildSelectedItemsPayload() {
+      return Array.from(selectedIds).map(id => {
+        const cfg = priceConfigs[id] || { mode: "oow", oow: "", direct: "" };
+        return {
+          id,
+          pricing_mode: cfg.mode,
+          oow_price: (cfg.mode === "oow" || cfg.mode === "both") ? (cfg.oow || null) : null,
+          direct_price: (cfg.mode === "direct" || cfg.mode === "both") ? (cfg.direct || null) : null
+        };
+      });
+    }
+
+    async function generatePdf(layoutMode) {
       if (!selectedIds.size && !customItems.length) {
         alert("Select at least one item or add a custom item first.");
         return;
       }
 
+      closeLayoutModal();
       generateBtn.disabled = true;
       generateBtn.textContent = "Generating...";
 
       try {
-        const itemsPayload = Array.from(selectedIds).map(id => ({
-          id: selectedVariants[id] || id,
-          oow_price: priceOverrides[id]?.oow || null,
-          direct_price: directEnabled[id] ? (priceOverrides[id]?.direct || null) : null,
-          show_direct: !!directEnabled[id],
-          show_oow: true
-        }));
-
         const payload = {
           customer_name: customerNameEl.value.trim(),
           program: programNameEl.value.trim() || "TEST",
           effective_date: effectiveDateEl.value || "",
-          price_mode: priceModeEl.value || "oow",
-          items: itemsPayload,
+          layout_mode: layoutMode,
+          items: buildSelectedItemsPayload(),
           custom_items: customItems,
           customer_logo_data: customerLogoData
         };
@@ -1371,9 +1378,7 @@
 
     function clearSelected() {
       selectedIds = new Set();
-      priceOverrides = {};
-      directEnabled = {};
-      selectedVariants = {};
+      priceConfigs = {};
       customItems = [];
       clearCustomInputs();
 
@@ -1440,15 +1445,27 @@
 
     categoryEl.addEventListener("change", fetchItems);
     searchEl.addEventListener("input", debounce(fetchItems, 250));
-    priceModeEl.addEventListener("change", () => {
-      if (currentItems.length) {
-        renderItems();
-      }
-    });
 
     addCustomBtn.addEventListener("click", addCustomItem);
     refreshBtn.addEventListener("click", fetchItems);
-    generateBtn.addEventListener("click", handleGenerate);
+
+    generateBtn.addEventListener("click", () => {
+      if (!selectedIds.size && !customItems.length) {
+        alert("Select at least one item or add a custom item first.");
+        return;
+      }
+      openLayoutModal();
+    });
+
+    gridLayoutBtn.addEventListener("click", () => generatePdf("grid"));
+    compactLayoutBtn.addEventListener("click", () => generatePdf("compact"));
+    cancelLayoutBtn.addEventListener("click", closeLayoutModal);
+    layoutModalEl.addEventListener("click", (e) => {
+      if (e.target === layoutModalEl) {
+        closeLayoutModal();
+      }
+    });
+
     clearBtn.addEventListener("click", clearSelected);
 
     loginBtn.addEventListener("click", async () => {
@@ -1479,14 +1496,14 @@
     logoutBtn.addEventListener("click", () => {
       clearSavedPassword();
       selectedIds = new Set();
-      priceOverrides = {};
-      directEnabled = {};
+      priceConfigs = {};
       currentItems = [];
       customItems = [];
       itemsWrapEl.innerHTML = `<div class="empty">Enter password to load products.</div>`;
       customItemsWrapEl.innerHTML = "";
       showingCountEl.textContent = "Showing 0 items";
       updateSelectedCount();
+      closeLayoutModal();
       showAuthScreen("");
       passwordInputEl.value = "";
     });
