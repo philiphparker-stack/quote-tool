@@ -16,6 +16,9 @@
       --brand:#0f3a6d;
       --brand-dark:#0a2d55;
       --gold:#bc8644;
+      --success:#027a48;
+      --success-bg:#ecfdf3;
+      --success-line:#cdebd8;
     }
 
     *{ box-sizing:border-box; }
@@ -149,7 +152,8 @@
       margin-bottom:14px;
     }
 
-    .leftStack{
+    .leftStack,
+    .rightStack{
       display:grid;
       gap:16px;
       align-items:start;
@@ -188,7 +192,7 @@
     }
 
     .pdfTopGrid{
-      grid-template-columns: repeat(3, minmax(160px, 1fr));
+      grid-template-columns: repeat(4, minmax(140px, 1fr));
     }
 
     .customGrid{
@@ -198,7 +202,7 @@
 
     .pdfBottomRow{
       display:grid;
-      grid-template-columns: 230px 86px auto auto auto;
+      grid-template-columns: 230px 86px auto auto auto auto;
       gap:10px;
       align-items:end;
       margin-top:10px;
@@ -269,6 +273,7 @@
       display:flex;
       align-items:end;
       gap:10px;
+      flex-wrap:wrap;
     }
 
     button{
@@ -344,6 +349,12 @@
       background:#ecfdf3;
       border-color:#cdebd8;
       color:#027a48;
+    }
+
+    .pill.loadedQuote{
+      background:#fff8eb;
+      border-color:#edd8b0;
+      color:#8a5a15;
     }
 
     .productsGrid{
@@ -555,6 +566,80 @@
       color:#667085;
     }
 
+    .savedQuotesTop{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:10px;
+      align-items:end;
+      margin-bottom:10px;
+    }
+
+    .savedQuotesStatus{
+      min-height:18px;
+      font-size:12px;
+      color:var(--muted);
+      margin-bottom:10px;
+    }
+
+    .savedQuotesList{
+      display:grid;
+      gap:10px;
+    }
+
+    .savedQuoteRow{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      border:1px solid #d8dee6;
+      background:#fff;
+      border-radius:14px;
+      padding:10px 12px;
+    }
+
+    .savedQuoteRow.active{
+      border-color:#edd8b0;
+      background:#fffaf1;
+      box-shadow:0 0 0 1px #f3dfb2 inset;
+    }
+
+    .savedQuoteMain{
+      min-width:0;
+    }
+
+    .savedQuoteTitle{
+      font-size:13px;
+      font-weight:900;
+      color:var(--brand-dark);
+      margin-bottom:4px;
+      word-break:break-word;
+    }
+
+    .savedQuoteMeta{
+      font-size:11px;
+      color:#667085;
+      line-height:1.45;
+      word-break:break-word;
+    }
+
+    .savedQuoteTag{
+      display:inline-block;
+      margin-left:8px;
+      background:#fff3d7;
+      border:1px solid #efd9a3;
+      color:#8a5a15;
+      font-size:10px;
+      font-weight:800;
+      padding:2px 7px;
+      border-radius:999px;
+      vertical-align:middle;
+    }
+
+    .successFlash{
+      color:var(--success);
+      font-weight:800;
+    }
+
     .modalBackdrop{
       position:fixed;
       inset:0;
@@ -606,7 +691,7 @@
         grid-template-columns:1fr;
       }
       .pdfBottomRow{
-        grid-template-columns: 1fr 86px auto auto auto;
+        grid-template-columns: 1fr 86px auto auto auto auto;
       }
     }
 
@@ -618,6 +703,9 @@
       }
       .productsGrid{
         grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
+      .savedQuotesTop{
+        grid-template-columns:1fr;
       }
     }
 
@@ -637,7 +725,8 @@
       .topBar{
         flex-direction:column;
       }
-      .customRow{
+      .customRow,
+      .savedQuoteRow{
         flex-direction:column;
         align-items:flex-start;
       }
@@ -760,57 +849,88 @@
         </section>
       </div>
 
-      <section class="panel">
-        <div class="panelTitle">PDF Quote Settings</div>
-        <div class="panelSub">These fields affect the generated PDF.</div>
+      <div class="rightStack">
+        <section class="panel">
+          <div class="panelTitle">PDF Quote Settings</div>
+          <div class="panelSub">These fields affect the generated PDF and saved quote record.</div>
 
-        <div class="formGrid pdfTopGrid">
-          <div class="field">
-            <label for="customerName">Customer Name</label>
-            <input id="customerName" type="text" placeholder="Ex: ABC Tile Supply" />
+          <div class="formGrid pdfTopGrid">
+            <div class="field">
+              <label for="quoteName">Quote Name</label>
+              <input id="quoteName" type="text" placeholder="Ex: Hillman Flooring" />
+            </div>
+
+            <div class="field">
+              <label for="customerName">Customer Name</label>
+              <input id="customerName" type="text" placeholder="Ex: ABC Tile Supply" />
+            </div>
+
+            <div class="field">
+              <label for="programName">Program Name</label>
+              <input id="programName" type="text" value="TEST" />
+            </div>
+
+            <div class="field">
+              <label for="effectiveDate">Effective Date</label>
+              <input id="effectiveDate" type="date" />
+            </div>
           </div>
 
-          <div class="field">
-            <label for="programName">Program Name</label>
-            <input id="programName" type="text" value="TEST" />
+          <div class="pdfBottomRow">
+            <div class="field">
+              <label for="customerLogo">Customer Logo</label>
+              <input id="customerLogo" type="file" accept="image/*" />
+            </div>
+
+            <div class="logoPreviewWrap">
+              <label>Preview</label>
+              <div class="logoPreview" id="logoPreview">No logo</div>
+            </div>
+
+            <div class="btnInline">
+              <button id="saveQuoteBtn" class="gold" type="button">Save Quote</button>
+            </div>
+
+            <div class="btnInline">
+              <button id="refreshBtn" type="button">Refresh List</button>
+            </div>
+
+            <div class="btnInline">
+              <button id="generateBtn" class="primary" type="button">Generate PDF</button>
+            </div>
+
+            <div class="btnInline">
+              <button id="clearBtn" type="button">Clear Selected</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panelTitle">Saved Quotes</div>
+          <div class="panelSub">Search and reopen quotes saved in the last 45 days.</div>
+
+          <div class="savedQuotesTop">
+            <div class="field">
+              <label for="savedQuoteSearch">Search Saved Quotes</label>
+              <input id="savedQuoteSearch" type="text" placeholder="Search by quote name, customer, program, or date" />
+            </div>
+
+            <div class="btnInline">
+              <button id="refreshSavedQuotesBtn" type="button">Refresh Saved Quotes</button>
+            </div>
           </div>
 
-          <div class="field">
-            <label for="effectiveDate">Effective Date</label>
-            <input id="effectiveDate" type="date" />
-          </div>
-        </div>
-
-        <div class="pdfBottomRow">
-          <div class="field">
-            <label for="customerLogo">Customer Logo</label>
-            <input id="customerLogo" type="file" accept="image/*" />
-          </div>
-
-          <div class="logoPreviewWrap">
-            <label>Preview</label>
-            <div class="logoPreview" id="logoPreview">No logo</div>
-          </div>
-
-          <div class="btnInline">
-            <button id="refreshBtn" type="button">Refresh List</button>
-          </div>
-
-          <div class="btnInline">
-            <button id="generateBtn" class="primary" type="button">Generate PDF</button>
-          </div>
-
-          <div class="btnInline">
-            <button id="clearBtn" type="button">Clear Selected</button>
-          </div>
-        </div>
-      </section>
+          <div id="savedQuotesStatus" class="savedQuotesStatus"></div>
+          <div id="savedQuotesWrap" class="savedQuotesList"></div>
+        </section>
+      </div>
     </div>
 
     <div class="statusBar">
       <div class="statusLeft">
         <div id="showingCount">Showing 0 items</div>
         <div class="pill" id="selectedCount">Selected: 0</div>
+        <div class="pill" id="loadedQuotePill">No saved quote loaded</div>
       </div>
       <div class="statusRight">
         <div class="pill" id="authStatus">Locked</div>
@@ -843,6 +963,7 @@
     const categoryEl = document.getElementById("category");
     const searchEl = document.getElementById("search");
 
+    const quoteNameEl = document.getElementById("quoteName");
     const customerNameEl = document.getElementById("customerName");
     const programNameEl = document.getElementById("programName");
     const effectiveDateEl = document.getElementById("effectiveDate");
@@ -859,11 +980,18 @@
     const logoPreviewEl = document.getElementById("logoPreview");
 
     const refreshBtn = document.getElementById("refreshBtn");
+    const saveQuoteBtn = document.getElementById("saveQuoteBtn");
     const generateBtn = document.getElementById("generateBtn");
     const clearBtn = document.getElementById("clearBtn");
 
+    const savedQuoteSearchEl = document.getElementById("savedQuoteSearch");
+    const refreshSavedQuotesBtn = document.getElementById("refreshSavedQuotesBtn");
+    const savedQuotesWrapEl = document.getElementById("savedQuotesWrap");
+    const savedQuotesStatusEl = document.getElementById("savedQuotesStatus");
+
     const showingCountEl = document.getElementById("showingCount");
     const selectedCountEl = document.getElementById("selectedCount");
+    const loadedQuotePillEl = document.getElementById("loadedQuotePill");
     const itemsWrapEl = document.getElementById("itemsWrap");
 
     let allFilters = null;
@@ -872,6 +1000,8 @@
     let priceConfigs = {};
     let customerLogoData = null;
     let customItems = [];
+    let currentSavedQuoteId = null;
+    let savedQuotes = [];
 
     const imageObserver = ("IntersectionObserver" in window)
       ? new IntersectionObserver((entries, observer) => {
@@ -980,6 +1110,22 @@
       authStatusEl.classList.add("authUnlocked");
     }
 
+    function resetLogoPreview() {
+      customerLogoData = null;
+      customerLogoEl.value = "";
+      logoPreviewEl.innerHTML = "No logo";
+    }
+
+    function setLogoPreview(data) {
+      if (!data) {
+        customerLogoData = null;
+        logoPreviewEl.innerHTML = "No logo";
+        return;
+      }
+      customerLogoData = data;
+      logoPreviewEl.innerHTML = `<img src="${data}" alt="Customer Logo" />`;
+    }
+
     function getImageSrc(item) {
       const img = String(item.image || "").trim();
       return img ? `assets/items/${encodeURI(img)}` : COMING_SOON_SRC;
@@ -987,6 +1133,16 @@
 
     function updateSelectedCount() {
       selectedCountEl.textContent = `Selected: ${selectedIds.size + customItems.length}`;
+    }
+
+    function updateLoadedQuotePill() {
+      if (currentSavedQuoteId && quoteNameEl.value.trim()) {
+        loadedQuotePillEl.textContent = `Loaded: ${quoteNameEl.value.trim()}`;
+        loadedQuotePillEl.classList.add("loadedQuote");
+      } else {
+        loadedQuotePillEl.textContent = "No saved quote loaded";
+        loadedQuotePillEl.classList.remove("loadedQuote");
+      }
     }
 
     function hasActiveFilters() {
@@ -1003,6 +1159,7 @@
       itemsWrapEl.innerHTML = `<div class="empty">Select a manufacturer, choose a category, or type in search to load products.</div>`;
       renderCustomItems();
       updateSelectedCount();
+      updateLoadedQuotePill();
     }
 
     function ensurePriceConfig(item) {
@@ -1119,6 +1276,7 @@
         itemsWrapEl.innerHTML = `<div class="empty">No products found.</div>`;
         renderCustomItems();
         updateSelectedCount();
+        updateLoadedQuotePill();
         return;
       }
 
@@ -1246,6 +1404,7 @@
 
       renderCustomItems();
       updateSelectedCount();
+      updateLoadedQuotePill();
     }
 
     function debounce(fn, wait = 250) {
@@ -1389,6 +1548,206 @@
       }
     }
 
+    function formatSavedQuoteMeta(quote) {
+      const parts = [];
+      if (quote.customer_name) parts.push(`Customer: ${quote.customer_name}`);
+      if (quote.program) parts.push(`Program: ${quote.program}`);
+      if (quote.effective_date) parts.push(`Date: ${quote.effective_date}`);
+      parts.push(`Items: ${quote.item_count || 0}`);
+      if (quote.updated_at) parts.push(`Updated: ${quote.updated_at.replace("T", " ").replace("+00:00", " UTC")}`);
+      return parts.join(" | ");
+    }
+
+    function renderSavedQuotes() {
+      if (!savedQuotes.length) {
+        savedQuotesWrapEl.innerHTML = `<div class="empty" style="padding:18px;">No saved quotes found.</div>`;
+        return;
+      }
+
+      savedQuotesWrapEl.innerHTML = savedQuotes.map(quote => `
+        <div class="savedQuoteRow ${quote.quote_id === currentSavedQuoteId ? "active" : ""}">
+          <div class="savedQuoteMain">
+            <div class="savedQuoteTitle">
+              ${escapeHtml(quote.quote_name || "Untitled Quote")}
+              ${quote.quote_id === currentSavedQuoteId ? `<span class="savedQuoteTag">Loaded</span>` : ``}
+            </div>
+            <div class="savedQuoteMeta">${escapeHtml(formatSavedQuoteMeta(quote))}</div>
+          </div>
+          <button class="small loadSavedQuoteBtn" type="button" data-id="${escapeHtml(quote.quote_id)}">Load</button>
+        </div>
+      `).join("");
+
+      document.querySelectorAll(".loadSavedQuoteBtn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          await loadSavedQuote(btn.dataset.id);
+        });
+      });
+    }
+
+    async function fetchSavedQuotes(showLoading = false) {
+      if (showLoading) {
+        savedQuotesStatusEl.textContent = "Loading saved quotes...";
+      }
+
+      try {
+        const q = savedQuoteSearchEl.value.trim();
+        const params = new URLSearchParams();
+        if (q) params.set("q", q);
+        params.set("limit", "100");
+
+        const res = await apiFetch(`${API_BASE}/saved-quotes?${params.toString()}`);
+        if (!res.ok) throw new Error("Failed to load saved quotes");
+
+        const data = await res.json();
+        savedQuotes = data.quotes || [];
+        renderSavedQuotes();
+
+        if (!savedQuotes.length) {
+          savedQuotesStatusEl.textContent = q
+            ? `No saved quotes matched "${q}".`
+            : "Saved quotes auto-delete after 45 days.";
+        } else {
+          savedQuotesStatusEl.textContent = `Showing ${savedQuotes.length} saved quote${savedQuotes.length === 1 ? "" : "s"}. Quotes auto-delete after 45 days.`;
+        }
+      } catch (err) {
+        if (String(err?.message || err) !== "Unauthorized") {
+          console.error(err);
+          savedQuotesStatusEl.textContent = "Could not load saved quotes.";
+          savedQuotesWrapEl.innerHTML = "";
+        }
+      }
+    }
+
+    async function saveQuote() {
+      const quoteName = quoteNameEl.value.trim();
+
+      if (!quoteName) {
+        alert("Enter a quote name first.");
+        return;
+      }
+
+      if (!selectedIds.size && !customItems.length) {
+        alert("Select at least one item or add a custom item before saving.");
+        return;
+      }
+
+      saveQuoteBtn.disabled = true;
+      saveQuoteBtn.textContent = "Saving...";
+
+      try {
+        const payload = {
+          quote_id: currentSavedQuoteId || null,
+          quote_name: quoteName,
+          customer_name: customerNameEl.value.trim(),
+          program: programNameEl.value.trim() || "TEST",
+          effective_date: effectiveDateEl.value || "",
+          layout_mode: "grid",
+          items: buildSelectedItemsPayload(),
+          custom_items: customItems,
+          customer_logo_data: customerLogoData
+        };
+
+        const res = await apiFetch(`${API_BASE}/saved-quotes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          console.error("Save quote error:", txt);
+          alert(txt || "Could not save quote.");
+          return;
+        }
+
+        const data = await res.json();
+        currentSavedQuoteId = data?.quote?.quote_id || currentSavedQuoteId;
+        updateLoadedQuotePill();
+
+        savedQuotesStatusEl.innerHTML = `<span class="successFlash">Saved "${escapeHtml(quoteName)}".</span>`;
+        await fetchSavedQuotes(false);
+      } catch (err) {
+        if (String(err?.message || err) !== "Unauthorized") {
+          console.error(err);
+          alert(`Could not save quote.\n\n${err.message || err}`);
+        }
+      } finally {
+        saveQuoteBtn.disabled = false;
+        saveQuoteBtn.textContent = "Save Quote";
+      }
+    }
+
+    async function loadSavedQuote(quoteId) {
+      if (!quoteId) return;
+
+      savedQuotesStatusEl.textContent = "Loading saved quote...";
+
+      try {
+        const res = await apiFetch(`${API_BASE}/saved-quotes/${encodeURIComponent(quoteId)}`);
+        if (!res.ok) {
+          const txt = await res.text();
+          console.error("Load saved quote error:", txt);
+          alert(txt || "Could not load saved quote.");
+          return;
+        }
+
+        const data = await res.json();
+        const quote = data.quote || {};
+
+        currentSavedQuoteId = quote.quote_id || quoteId;
+
+        quoteNameEl.value = quote.quote_name || "";
+        customerNameEl.value = quote.customer_name || "";
+        programNameEl.value = quote.program || "TEST";
+        effectiveDateEl.value = quote.effective_date || "";
+
+        selectedIds = new Set();
+        priceConfigs = {};
+        customItems = Array.isArray(quote.custom_items) ? quote.custom_items.map(item => ({
+          name: item.name || "",
+          manufacturer: item.manufacturer || "",
+          category: (item.category || "OTHER").toUpperCase(),
+          id: item.id || "",
+          uom: item.uom || "ea",
+          price: item.price ?? ""
+        })) : [];
+
+        (quote.items || []).forEach(item => {
+          const id = String(item.id || "").trim();
+          if (!id) return;
+          selectedIds.add(id);
+          priceConfigs[id] = {
+            mode: item.pricing_mode || "oow",
+            oow: item.oow_price ?? "",
+            direct: item.direct_price ?? ""
+          };
+        });
+
+        setLogoPreview(quote.customer_logo_data || null);
+
+        manufacturerEl.value = "";
+        rebuildCategories();
+        categoryEl.value = "";
+        searchEl.value = "";
+
+        currentItems = Array.isArray(quote.display_items) ? quote.display_items : [];
+        if (currentItems.length) {
+          renderItems();
+        } else {
+          renderIdleState();
+        }
+
+        await fetchSavedQuotes(false);
+        savedQuotesStatusEl.innerHTML = `<span class="successFlash">Loaded "${escapeHtml(quote.quote_name || "Saved Quote")}".</span>`;
+      } catch (err) {
+        if (String(err?.message || err) !== "Unauthorized") {
+          console.error(err);
+          alert(`Could not load saved quote.\n\n${err.message || err}`);
+          savedQuotesStatusEl.textContent = "Could not load saved quote.";
+        }
+      }
+    }
+
     async function tryLogin(password) {
       setSavedPassword(password);
 
@@ -1414,6 +1773,7 @@
         hideAuthScreen();
         await fetchFilters();
         renderIdleState();
+        await fetchSavedQuotes(true);
         return true;
       } catch (err) {
         clearSavedPassword();
@@ -1448,6 +1808,7 @@
 
     addCustomBtn.addEventListener("click", addCustomItem);
     refreshBtn.addEventListener("click", fetchItems);
+    saveQuoteBtn.addEventListener("click", saveQuote);
 
     generateBtn.addEventListener("click", () => {
       if (!selectedIds.size && !customItems.length) {
@@ -1467,6 +1828,9 @@
     });
 
     clearBtn.addEventListener("click", clearSelected);
+
+    savedQuoteSearchEl.addEventListener("input", debounce(() => fetchSavedQuotes(false), 250));
+    refreshSavedQuotesBtn.addEventListener("click", () => fetchSavedQuotes(true));
 
     loginBtn.addEventListener("click", async () => {
       authErrorEl.textContent = "";
@@ -1499,10 +1863,19 @@
       priceConfigs = {};
       currentItems = [];
       customItems = [];
+      currentSavedQuoteId = null;
+      savedQuotes = [];
+      quoteNameEl.value = "";
+      customerNameEl.value = "";
+      programNameEl.value = "TEST";
+      resetLogoPreview();
       itemsWrapEl.innerHTML = `<div class="empty">Enter password to load products.</div>`;
       customItemsWrapEl.innerHTML = "";
+      savedQuotesWrapEl.innerHTML = "";
+      savedQuotesStatusEl.textContent = "";
       showingCountEl.textContent = "Showing 0 items";
       updateSelectedCount();
+      updateLoadedQuotePill();
       closeLayoutModal();
       showAuthScreen("");
       passwordInputEl.value = "";
@@ -1530,6 +1903,7 @@
     }
 
     updateSelectedCount();
+    updateLoadedQuotePill();
     init();
   </script>
 </body>
