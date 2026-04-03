@@ -2,6 +2,8 @@ import os
 import json
 import base64
 import re
+import uuid
+from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from typing import List, Dict, Any, Optional, Tuple
 
@@ -35,6 +37,9 @@ EMSER_LOGO_CANDIDATES = [
 
 COMING_SOON_IMAGE = os.path.join(IMAGES_DIR, "comingsoon.png")
 
+SAVED_QUOTES_DIR = os.path.join(PROJECT_ROOT, "data", "saved_quotes")
+SAVED_QUOTE_RETENTION_DAYS = 45
+
 # ============================================================
 # Security
 # ============================================================
@@ -52,6 +57,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+os.makedirs(SAVED_QUOTES_DIR, exist_ok=True)
 
 # ============================================================
 # Request models
@@ -86,6 +93,18 @@ class GenerateReq(BaseModel):
     # new per-item support
     items: Optional[List[SelectedItemReq]] = None
 
+    custom_items: Optional[List[CustomItemReq]] = None
+    customer_logo_data: Optional[str] = None
+
+
+class SaveQuoteReq(BaseModel):
+    quote_id: Optional[str] = None
+    quote_name: str
+    program: str = "TEST"
+    customer_name: Optional[str] = None
+    effective_date: Optional[str] = None
+    layout_mode: Optional[str] = "grid"
+    items: Optional[List[SelectedItemReq]] = None
     custom_items: Optional[List[CustomItemReq]] = None
     customer_logo_data: Optional[str] = None
 
@@ -345,6 +364,169 @@ def get_price_lines(it: Dict[str, Any], legacy_mode: str) -> List[str]:
 
     label = "Direct" if legacy_mode == "direct" else "OOW"
     return [fmt_single_price(label, price_val, uom)]
+
+
+# ============================================================
+# Saved quotes helpers
+# ============================================================
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def utc_now_iso() -> str:
+    return utc_now().replace(microsecond=0).isoformat()
+
+
+def parse_iso_datetime(value: Any) -> Optional[datetime]:
+    value = norm(value)
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def safe_quote_id(raw: str) -> str:
+    raw = norm(raw)
+    if not raw:
+        return ""
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", raw):
+        return ""
+    return raw
+
+
+def saved_quote_path(quote_id: str) -> str:
+    return os.path.join(SAVED_QUOTES_DIR, f"{quote_id}.json")
+
+
+def purge_expired_saved_quotes():
+    cutoff = utc_now() - timedelta(days=SAVED_QUOTE_RETENTION_DAYS)
+
+    if not os.path.exists(SAVED_QUOTES_DIR):
+        return
+
+    for name in os.listdir(SAVED_QUOTES_DIR):
+        if not name.lower().endswith(".json"):
+            continue
+
+        path = os.path.join(SAVED_QUOTES_DIR, name)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                payload = json.load(f)
+
+            dt = (
+                parse_iso_datetime(payload.get("updated_at"))
+                or parse_iso_datetime(payload.get("created_at"))
+            )
+
+            if dt is None:
+                try:
+                    stat = os.stat(path)
+                    dt = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
+                except Exception:
+                    dt = None
+
+            if dt is not None and dt < cutoff:
+                os.remove(path)
+        except Exception:
+            continue
+
+
+def build_display_items_for_saved_quote(
+    selected_items: List[SelectedItemReq],
+    items_map: Dict[str, Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+
+    for selected in selected_items:
+        item_id = norm(selected.id)
+        base = items_map.get(item_id)
+        if not base:
+            continue
+
+        out.append({
+            "id": norm(base.get("id")),
+            "name": norm(base.get("name")),
+            "manufacturer": norm(base.get("manufacturer") or base.get("mfr") or base.get("brand")),
+            "category": norm(base.get("category")),
+            "uom": norm(base.get("uom") or "ea"),
+            "price_direct": base.get("price_direct"),
+            "price_oow": base.get("price_oow"),
+            "image": norm(base.get("image")),
+            "aliases": norm(base.get("aliases")),
+            "search_terms": norm(base.get("search_terms")),
+        })
+
+    return out
+
+
+def serialize_selected_items(items: Optional[List[SelectedItemReq]]) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    for selected in (items or []):
+        pricing_mode = norm(selected.pricing_mode).lower()
+        if pricing_mode not in {"oow", "direct", "both"}:
+            pricing_mode = "oow"
+
+        out.append({
+            "id": norm(selected.id),
+            "pricing_mode": pricing_mode,
+            "oow_price": selected.oow_price,
+            "direct_price": selected.direct_price,
+        })
+    return out
+
+
+def serialize_custom_items(items: Optional[List[CustomItemReq]]) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    for custom in (items or []):
+        out.append({
+            "name": norm(custom.name),
+            "manufacturer": norm(custom.manufacturer),
+            "category": norm(custom.category),
+            "id": norm(custom.id),
+            "uom": norm(custom.uom) or "ea",
+            "price": custom.price,
+        })
+    return out
+
+
+def saved_quote_summary(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "quote_id": norm(payload.get("quote_id")),
+        "quote_name": norm(payload.get("quote_name")),
+        "customer_name": norm(payload.get("customer_name")),
+        "program": norm(payload.get("program")),
+        "effective_date": norm(payload.get("effective_date")),
+        "layout_mode": norm(payload.get("layout_mode")) or "grid",
+        "created_at": norm(payload.get("created_at")),
+        "updated_at": norm(payload.get("updated_at")),
+        "item_count": len(payload.get("items") or []) + len(payload.get("custom_items") or []),
+    }
+
+
+def load_saved_quote_payload(quote_id: str) -> Dict[str, Any]:
+    quote_id = safe_quote_id(quote_id)
+    if not quote_id:
+        raise HTTPException(status_code=400, detail="Invalid saved quote ID.")
+
+    path = saved_quote_path(quote_id)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Saved quote not found.")
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        if not isinstance(payload, dict):
+            raise ValueError("Invalid saved quote format.")
+        return payload
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Could not read saved quote.")
 
 
 # ============================================================
@@ -1120,6 +1302,9 @@ def build_pdf_compact(
     usable_w = W - left - right
     row_gap = 4
     row_h = 50
+    section_header_h = 18
+    section_header_gap = 8
+    column_header_h = 10
 
     customer_logo_reader = decode_logo_data(customer_logo_data)
     page_num = 1
@@ -1149,36 +1334,42 @@ def build_pdf_compact(
         )
         y = header_divider_y - 10
 
+    def draw_compact_column_headings(y_top: float) -> float:
+        c.setFont("Helvetica-Bold", 7.2)
+        c.setFillColor(SOFT_TEXT)
+        c.drawString(left + 44, y_top - 2, "Description")
+        c.drawString(left + 290, y_top - 2, "SKU")
+        c.drawString(left + 382, y_top - 2, "Manufacturer")
+        c.drawString(left + 490, y_top - 2, "Pricing")
+        return y_top - column_header_h
+
+    min_section_start_space = section_header_h + section_header_gap + column_header_h + row_h
+
     for cat_key, cat_items in groups:
         label = pretty_category(cat_key)
 
-        section_header_h = 18
-        if y - (section_header_h + 8 + row_h) < bottom:
+        # IMPORTANT FIX:
+        # Do not start a compact category section unless there is room for:
+        # header + column headings + at least one item row
+        if y - min_section_start_space < bottom:
             new_page()
 
         draw_category_header(c, left, y, usable_w, label)
-        y -= (section_header_h + 8)
-
-        c.setFont("Helvetica-Bold", 7.2)
-        c.setFillColor(SOFT_TEXT)
-        c.drawString(left + 44, y - 2, "Description")
-        c.drawString(left + 290, y - 2, "SKU")
-        c.drawString(left + 382, y - 2, "Manufacturer")
-        c.drawString(left + 490, y - 2, "Pricing")
-        y -= 10
+        y -= (section_header_h + section_header_gap)
+        y = draw_compact_column_headings(y)
 
         for it in cat_items:
             if y - row_h < bottom:
                 new_page()
+
+                # On continuation pages, apply the same rule:
+                # draw header + column headings together before first row
+                if y - min_section_start_space < bottom:
+                    new_page()
+
                 draw_category_header(c, left, y, usable_w, label + " (cont.)")
-                y -= (section_header_h + 8)
-                c.setFont("Helvetica-Bold", 7.2)
-                c.setFillColor(SOFT_TEXT)
-                c.drawString(left + 44, y - 2, "Description")
-                c.drawString(left + 290, y - 2, "SKU")
-                c.drawString(left + 382, y - 2, "Manufacturer")
-                c.drawString(left + 490, y - 2, "Pricing")
-                y -= 10
+                y -= (section_header_h + section_header_gap)
+                y = draw_compact_column_headings(y)
 
             draw_compact_row(c, left, y, usable_w, row_h, it, fallback_mode)
             y -= (row_h + row_gap)
@@ -1245,6 +1436,9 @@ def health():
         "emser_logo_found": emser_logo_found,
         "coming_soon_exists": os.path.exists(COMING_SOON_IMAGE),
         "password_protected": True,
+        "saved_quotes_dir": SAVED_QUOTES_DIR,
+        "saved_quotes_dir_exists": os.path.exists(SAVED_QUOTES_DIR),
+        "saved_quote_retention_days": SAVED_QUOTE_RETENTION_DAYS,
     }
 
 
@@ -1290,6 +1484,124 @@ def get_items(
         limit=limit,
     )
     return {"items": filtered}
+
+
+@app.get("/saved-quotes")
+def list_saved_quotes(
+    request: Request,
+    q: Optional[str] = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=500),
+):
+    require_password(request)
+    purge_expired_saved_quotes()
+
+    results: List[Dict[str, Any]] = []
+    q_norm = normalize_search_text(q or "")
+
+    if not os.path.exists(SAVED_QUOTES_DIR):
+        return {"quotes": []}
+
+    for name in os.listdir(SAVED_QUOTES_DIR):
+        if not name.lower().endswith(".json"):
+            continue
+
+        path = os.path.join(SAVED_QUOTES_DIR, name)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                payload = json.load(f)
+            if not isinstance(payload, dict):
+                continue
+        except Exception:
+            continue
+
+        summary = saved_quote_summary(payload)
+        searchable = normalize_search_text(
+            " ".join([
+                summary.get("quote_name", ""),
+                summary.get("customer_name", ""),
+                summary.get("program", ""),
+                summary.get("effective_date", ""),
+            ])
+        )
+
+        if q_norm and q_norm not in searchable:
+            q_tokens = tokenize_search_text(q_norm)
+            searchable_tokens = set(tokenize_search_text(searchable))
+            if not q_tokens or not all(tok in searchable_tokens or any(tok in st for st in searchable_tokens) for tok in q_tokens):
+                continue
+
+        results.append(summary)
+
+    results.sort(key=lambda x: norm(x.get("updated_at")), reverse=True)
+    return {"quotes": results[:limit]}
+
+
+@app.get("/saved-quotes/{quote_id}")
+def get_saved_quote(request: Request, quote_id: str):
+    require_password(request)
+    purge_expired_saved_quotes()
+
+    payload = load_saved_quote_payload(quote_id)
+    return {"quote": payload}
+
+
+@app.post("/saved-quotes")
+def save_quote(request: Request, req: SaveQuoteReq):
+    require_password(request)
+    purge_expired_saved_quotes()
+
+    quote_name = norm(req.quote_name)
+    if not quote_name:
+        raise HTTPException(status_code=400, detail="Quote name is required.")
+
+    if not (req.items or req.custom_items):
+        raise HTTPException(status_code=400, detail="Select at least one item or add a custom item before saving.")
+
+    quote_id = safe_quote_id(req.quote_id or "") or uuid.uuid4().hex
+    path = saved_quote_path(quote_id)
+
+    now_iso = utc_now_iso()
+    created_at = now_iso
+
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+            created_at = norm(existing.get("created_at")) or now_iso
+        except Exception:
+            created_at = now_iso
+
+    items_map = load_items_map()
+    serialized_items = serialize_selected_items(req.items)
+    serialized_custom_items = serialize_custom_items(req.custom_items)
+    display_items = build_display_items_for_saved_quote(req.items or [], items_map)
+
+    payload = {
+        "quote_id": quote_id,
+        "quote_name": quote_name,
+        "customer_name": norm(req.customer_name),
+        "program": norm(req.program) or "TEST",
+        "effective_date": norm(req.effective_date),
+        "layout_mode": norm(req.layout_mode).lower() if norm(req.layout_mode).lower() in {"grid", "compact"} else "grid",
+        "items": serialized_items,
+        "custom_items": serialized_custom_items,
+        "display_items": display_items,
+        "customer_logo_data": req.customer_logo_data,
+        "created_at": created_at,
+        "updated_at": now_iso,
+    }
+
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Could not save quote.")
+
+    return {
+        "ok": True,
+        "quote": payload,
+        "summary": saved_quote_summary(payload),
+    }
 
 
 @app.post("/generate")
