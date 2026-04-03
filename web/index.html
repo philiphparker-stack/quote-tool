@@ -581,6 +581,27 @@
       margin-bottom:10px;
     }
 
+    .savedQuotesScroller{
+      max-height:260px;
+      overflow-y:auto;
+      padding-right:4px;
+    }
+
+    .savedQuotesScroller::-webkit-scrollbar{
+      width:10px;
+    }
+
+    .savedQuotesScroller::-webkit-scrollbar-track{
+      background:#f1f4f8;
+      border-radius:999px;
+    }
+
+    .savedQuotesScroller::-webkit-scrollbar-thumb{
+      background:#c8d2df;
+      border-radius:999px;
+      border:2px solid #f1f4f8;
+    }
+
     .savedQuotesList{
       display:grid;
       gap:10px;
@@ -729,6 +750,9 @@
       .savedQuoteRow{
         flex-direction:column;
         align-items:flex-start;
+      }
+      .savedQuotesScroller{
+        max-height:220px;
       }
     }
   </style>
@@ -921,7 +945,10 @@
           </div>
 
           <div id="savedQuotesStatus" class="savedQuotesStatus"></div>
-          <div id="savedQuotesWrap" class="savedQuotesList"></div>
+
+          <div class="savedQuotesScroller">
+            <div id="savedQuotesWrap" class="savedQuotesList"></div>
+          </div>
         </section>
       </div>
     </div>
