@@ -1036,41 +1036,16 @@ def group_items_for_pdf(items: List[Dict[str, Any]]) -> List[Tuple[str, List[Dic
     return [(cat, grouped[cat]) for cat in ordered_cats]
 
 
-def is_small_group(items: List[Dict[str, Any]]) -> bool:
-    return len(items) == 1
+def is_half_width_group(items: List[Dict[str, Any]]) -> bool:
+    return len(items) in {1, 2}
 
 
-def estimate_small_section_height(num_items: int, card_h: float, row_gap: float) -> float:
+def estimate_half_width_section_height(card_h: float) -> float:
     header_h = 18
-    if num_items <= 0:
-        return header_h + 8
-    cards_block = (num_items * card_h) + ((num_items - 1) * row_gap)
-    return header_h + 8 + cards_block
+    return header_h + 8 + card_h
 
 
-def draw_small_category_section(
-    c: canvas.Canvas,
-    x: float,
-    y_top: float,
-    section_w: float,
-    cat_key: str,
-    cat_items: List[Dict[str, Any]],
-    fallback_mode: str,
-    card_h: float,
-    row_gap: float,
-):
-    label = pretty_category(cat_key)
-    header_h = draw_category_header(c, x, y_top, section_w, label)
-    y = y_top - (header_h + 8)
-
-    for it in cat_items:
-        draw_card(c, x, y, section_w, card_h, it, fallback_mode)
-        y -= (card_h + row_gap)
-
-    return estimate_small_section_height(len(cat_items), card_h, row_gap)
-
-
-def draw_two_up_category_section(
+def draw_half_width_category_section(
     c: canvas.Canvas,
     x: float,
     y_top: float,
@@ -1086,17 +1061,16 @@ def draw_two_up_category_section(
     header_h = draw_category_header(c, x, y_top, section_w, label)
     y = y_top - (header_h + 8)
 
-    total_cards_w = (card_w * 2) + gutter
-    start_x = x + ((section_w - total_cards_w) / 2)
+    # Left-align cards inside the half-width section.
+    start_x = x
 
-    if len(cat_items) >= 1:
+    if len(cat_items) == 1:
         draw_card(c, start_x, y, card_w, card_h, cat_items[0], fallback_mode)
-
-    if len(cat_items) >= 2:
+    else:
+        draw_card(c, start_x, y, card_w, card_h, cat_items[0], fallback_mode)
         draw_card(c, start_x + card_w + gutter, y, card_w, card_h, cat_items[1], fallback_mode)
 
-    used_height = header_h + 8 + card_h
-    return used_height
+    return estimate_half_width_section_height(card_h)
 
 
 def build_pdf_grid(
@@ -1123,7 +1097,8 @@ def build_pdf_grid(
     card_w = (usable_w - gutter * (cols - 1)) / cols
     card_h = 112
 
-    small_section_w = (usable_w - section_gap) / 2
+    half_section_w = (usable_w - section_gap) / 2
+    half_section_inner_gutter = max(4, half_section_w - (card_w * 2))
 
     customer_logo_reader = decode_logo_data(customer_logo_data)
     page_num = 1
@@ -1139,6 +1114,7 @@ def build_pdf_grid(
 
     groups = group_items_for_pdf(items)
     min_full_section_space = 18 + 8 + card_h + row_gap
+    min_half_section_space = estimate_half_width_section_height(card_h)
 
     def new_page():
         nonlocal y, page_num, header_divider_y
@@ -1159,76 +1135,47 @@ def build_pdf_grid(
         cat_key, cat_items = groups[i]
 
         # ----------------------------------------------------
-        # Two-item categories = same category, side-by-side
-        # using normal card width
+        # Half-width categories: 1 or 2 items
+        # These can pair side-by-side on the same row.
         # ----------------------------------------------------
-        if len(cat_items) == 2:
-            needed_height = 18 + 8 + card_h
+        if is_half_width_group(cat_items):
+            next_pair = None
+            if i + 1 < len(groups):
+                next_cat_key, next_cat_items = groups[i + 1]
+                if is_half_width_group(next_cat_items):
+                    next_pair = (next_cat_key, next_cat_items)
+
+            needed_height = min_half_section_space
 
             if y - needed_height < bottom:
                 new_page()
 
-            used_height = draw_two_up_category_section(
+            used_left = draw_half_width_category_section(
                 c=c,
                 x=left,
                 y_top=y,
-                section_w=usable_w,
+                section_w=half_section_w,
                 cat_key=cat_key,
                 cat_items=cat_items,
                 fallback_mode=fallback_mode,
                 card_w=card_w,
                 card_h=card_h,
-                gutter=gutter,
-            )
-
-            y -= used_height + 6
-            i += 1
-            continue
-
-        # ----------------------------------------------------
-        # One-item categories can pair side-by-side
-        # ----------------------------------------------------
-        if is_small_group(cat_items):
-            next_pair = None
-            if i + 1 < len(groups):
-                next_cat_key, next_cat_items = groups[i + 1]
-                if is_small_group(next_cat_items):
-                    next_pair = (next_cat_key, next_cat_items)
-
-            left_height = estimate_small_section_height(len(cat_items), card_h, row_gap)
-            right_height = 0
-            if next_pair:
-                right_height = estimate_small_section_height(len(next_pair[1]), card_h, row_gap)
-
-            needed_height = max(left_height, right_height if next_pair else 0)
-
-            if y - needed_height < bottom:
-                new_page()
-
-            used_left = draw_small_category_section(
-                c=c,
-                x=left,
-                y_top=y,
-                section_w=small_section_w,
-                cat_key=cat_key,
-                cat_items=cat_items,
-                fallback_mode=fallback_mode,
-                card_h=card_h,
-                row_gap=row_gap,
+                gutter=half_section_inner_gutter,
             )
 
             used_right = 0
             if next_pair:
-                used_right = draw_small_category_section(
+                used_right = draw_half_width_category_section(
                     c=c,
-                    x=left + small_section_w + section_gap,
+                    x=left + half_section_w + section_gap,
                     y_top=y,
-                    section_w=small_section_w,
+                    section_w=half_section_w,
                     cat_key=next_pair[0],
                     cat_items=next_pair[1],
                     fallback_mode=fallback_mode,
+                    card_w=card_w,
                     card_h=card_h,
-                    row_gap=row_gap,
+                    gutter=half_section_inner_gutter,
                 )
 
             y -= max(used_left, used_right if next_pair else 0) + 6
@@ -1240,7 +1187,7 @@ def build_pdf_grid(
             continue
 
         # ----------------------------------------------------
-        # Full-width categories
+        # Full-width categories: 3+ items
         # ----------------------------------------------------
         if y - min_full_section_space < bottom:
             new_page()
@@ -1348,9 +1295,6 @@ def build_pdf_compact(
     for cat_key, cat_items in groups:
         label = pretty_category(cat_key)
 
-        # IMPORTANT FIX:
-        # Do not start a compact category section unless there is room for:
-        # header + column headings + at least one item row
         if y - min_section_start_space < bottom:
             new_page()
 
@@ -1362,8 +1306,6 @@ def build_pdf_compact(
             if y - row_h < bottom:
                 new_page()
 
-                # On continuation pages, apply the same rule:
-                # draw header + column headings together before first row
                 if y - min_section_start_space < bottom:
                     new_page()
 
