@@ -84,6 +84,7 @@ class GenerateReq(BaseModel):
     customer_name: Optional[str] = None
     effective_date: Optional[str] = None
     layout_mode: Optional[str] = "grid"
+    categorize_by: Optional[str] = "category"
 
     # legacy support
     price_mode: Optional[str] = "oow"
@@ -104,6 +105,7 @@ class SaveQuoteReq(BaseModel):
     customer_name: Optional[str] = None
     effective_date: Optional[str] = None
     layout_mode: Optional[str] = "grid"
+    categorize_by: Optional[str] = "category"
     items: Optional[List[SelectedItemReq]] = None
     custom_items: Optional[List[CustomItemReq]] = None
     customer_logo_data: Optional[str] = None
@@ -494,6 +496,68 @@ def serialize_custom_items(items: Optional[List[CustomItemReq]]) -> List[Dict[st
     return out
 
 
+
+def build_saved_quote_searchable_text(summary: Dict[str, Any]) -> str:
+    effective_date = norm(summary.get("effective_date"))
+    date_parts: List[str] = [effective_date]
+
+    if effective_date:
+        try:
+            parsed = datetime.strptime(effective_date, "%Y-%m-%d")
+            date_parts.extend([
+                parsed.strftime("%m/%d/%Y"),
+                parsed.strftime("%m/%d/%y"),
+                parsed.strftime("%-m/%-d/%Y") if os.name != "nt" else parsed.strftime("%#m/%#d/%Y"),
+                parsed.strftime("%-m/%-d/%y") if os.name != "nt" else parsed.strftime("%#m/%#d/%y"),
+                parsed.strftime("%B %d %Y"),
+                parsed.strftime("%b %d %Y"),
+                parsed.strftime("%B %Y"),
+                parsed.strftime("%b %Y"),
+            ])
+        except Exception:
+            pass
+
+    return normalize_search_text(
+        " ".join([
+            summary.get("quote_id", ""),
+            summary.get("quote_name", ""),
+            summary.get("customer_name", ""),
+            summary.get("program", ""),
+            *date_parts,
+        ])
+    )
+
+
+def saved_quote_matches_query(summary: Dict[str, Any], q: str) -> bool:
+    q_norm = normalize_search_text(q or "")
+    if not q_norm:
+        return True
+
+    searchable = build_saved_quote_searchable_text(summary)
+    if not searchable:
+        return False
+
+    if q_norm in searchable:
+        return True
+
+    q_tokens = tokenize_search_text(q_norm)
+    searchable_tokens = tokenize_search_text(searchable)
+
+    if not q_tokens or not searchable_tokens:
+        return False
+
+    for token in q_tokens:
+        if not any(
+            token == searchable_token
+            or searchable_token.startswith(token)
+            or token in searchable_token
+            for searchable_token in searchable_tokens
+        ):
+            return False
+
+    return True
+
+
 def saved_quote_summary(payload: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "quote_id": norm(payload.get("quote_id")),
@@ -502,6 +566,7 @@ def saved_quote_summary(payload: Dict[str, Any]) -> Dict[str, Any]:
         "program": norm(payload.get("program")),
         "effective_date": norm(payload.get("effective_date")),
         "layout_mode": norm(payload.get("layout_mode")) or "grid",
+        "categorize_by": norm(payload.get("categorize_by")) or "category",
         "created_at": norm(payload.get("created_at")),
         "updated_at": norm(payload.get("updated_at")),
         "item_count": len(payload.get("items") or []) + len(payload.get("custom_items") or []),
@@ -1016,7 +1081,33 @@ def draw_compact_row(
         price_y -= 9
 
 
-def group_items_for_pdf(items: List[Dict[str, Any]]) -> List[Tuple[str, List[Dict[str, Any]]]]:
+def group_items_for_pdf(
+    items: List[Dict[str, Any]],
+    categorize_by: str = "category",
+) -> List[Tuple[str, List[Dict[str, Any]]]]:
+    mode = norm(categorize_by).lower()
+
+    if mode == "manufacturer":
+        items_sorted = sorted(
+            items,
+            key=lambda it: (
+                norm(it.get("manufacturer")).lower() or "zzzz",
+                category_sort_key(it.get("category", "")),
+                norm(it.get("category")).upper(),
+                norm(it.get("name")).lower(),
+            ),
+        )
+
+        grouped: Dict[str, List[Dict[str, Any]]] = {}
+        labels: Dict[str, str] = {}
+        for it in items_sorted:
+            group_key = norm(it.get("manufacturer")).lower() or "other"
+            grouped.setdefault(group_key, []).append(it)
+            labels[group_key] = norm(it.get("manufacturer")) or "OTHER"
+
+        ordered_keys = sorted(grouped.keys(), key=lambda k: labels.get(k, k).lower())
+        return [(labels[key], grouped[key]) for key in ordered_keys]
+
     items_sorted = sorted(
         items,
         key=lambda it: (
@@ -1033,11 +1124,11 @@ def group_items_for_pdf(items: List[Dict[str, Any]]) -> List[Tuple[str, List[Dic
         grouped.setdefault(cat, []).append(it)
 
     ordered_cats = sorted(grouped.keys(), key=lambda c: (category_sort_key(c), c))
-    return [(cat, grouped[cat]) for cat in ordered_cats]
+    return [(pretty_category(cat), grouped[cat]) for cat in ordered_cats]
 
 
 def is_half_width_group(items: List[Dict[str, Any]]) -> bool:
-    return len(items) in {1, 2}
+    return len(items) == 2
 
 
 def estimate_half_width_section_height(card_h: float) -> float:
@@ -1050,15 +1141,14 @@ def draw_half_width_category_section(
     x: float,
     y_top: float,
     section_w: float,
-    cat_key: str,
+    group_label: str,
     cat_items: List[Dict[str, Any]],
     fallback_mode: str,
     card_w: float,
     card_h: float,
     gutter: float,
 ):
-    label = pretty_category(cat_key)
-    header_h = draw_category_header(c, x, y_top, section_w, label)
+    header_h = draw_category_header(c, x, y_top, section_w, group_label)
     y = y_top - (header_h + 8)
 
     # Left-align cards inside the half-width section.
@@ -1080,6 +1170,7 @@ def build_pdf_grid(
     program: str = "TEST",
     customer_name: str = "",
     effective_date: str = "",
+    categorize_by: str = "category",
 ) -> bytes:
     buf = BytesIO()
     c = canvas.Canvas(buf, pagesize=letter, pageCompression=1)
@@ -1112,7 +1203,7 @@ def build_pdf_grid(
     )
     y = header_divider_y - 10
 
-    groups = group_items_for_pdf(items)
+    groups = group_items_for_pdf(items, categorize_by=categorize_by)
     min_full_section_space = 18 + 8 + card_h + row_gap
     min_half_section_space = estimate_half_width_section_height(card_h)
 
@@ -1132,7 +1223,7 @@ def build_pdf_grid(
 
     i = 0
     while i < len(groups):
-        cat_key, cat_items = groups[i]
+        group_label, cat_items = groups[i]
 
         # ----------------------------------------------------
         # Half-width categories: 1 or 2 items
@@ -1141,9 +1232,9 @@ def build_pdf_grid(
         if is_half_width_group(cat_items):
             next_pair = None
             if i + 1 < len(groups):
-                next_cat_key, next_cat_items = groups[i + 1]
+                next_group_label, next_cat_items = groups[i + 1]
                 if is_half_width_group(next_cat_items):
-                    next_pair = (next_cat_key, next_cat_items)
+                    next_pair = (next_group_label, next_cat_items)
 
             needed_height = min_half_section_space
 
@@ -1155,7 +1246,7 @@ def build_pdf_grid(
                 x=left,
                 y_top=y,
                 section_w=half_section_w,
-                cat_key=cat_key,
+                group_label=group_label,
                 cat_items=cat_items,
                 fallback_mode=fallback_mode,
                 card_w=card_w,
@@ -1170,7 +1261,7 @@ def build_pdf_grid(
                     x=left + half_section_w + section_gap,
                     y_top=y,
                     section_w=half_section_w,
-                    cat_key=next_pair[0],
+                    group_label=next_pair[0],
                     cat_items=next_pair[1],
                     fallback_mode=fallback_mode,
                     card_w=card_w,
@@ -1192,7 +1283,7 @@ def build_pdf_grid(
         if y - min_full_section_space < bottom:
             new_page()
 
-        label = pretty_category(cat_key)
+        label = group_label
         header_h = draw_category_header(c, left, y, usable_w, label)
         y -= (header_h + 8)
 
@@ -1238,6 +1329,7 @@ def build_pdf_compact(
     program: str = "TEST",
     customer_name: str = "",
     effective_date: str = "",
+    categorize_by: str = "category",
 ) -> bytes:
     buf = BytesIO()
     c = canvas.Canvas(buf, pagesize=letter, pageCompression=1)
@@ -1252,6 +1344,7 @@ def build_pdf_compact(
     section_header_h = 18
     section_header_gap = 8
     column_header_h = 10
+    section_start_buffer = 6
 
     customer_logo_reader = decode_logo_data(customer_logo_data)
     page_num = 1
@@ -1265,7 +1358,7 @@ def build_pdf_compact(
     )
 
     y = header_divider_y - 10
-    groups = group_items_for_pdf(items)
+    groups = group_items_for_pdf(items, categorize_by=categorize_by)
 
     def new_page():
         nonlocal y, page_num, header_divider_y
@@ -1290,13 +1383,24 @@ def build_pdf_compact(
         c.drawString(left + 490, y_top - 2, "Pricing")
         return y_top - column_header_h
 
-    min_section_start_space = section_header_h + section_header_gap + column_header_h + row_h
+    min_section_start_space = (
+        section_header_h
+        + section_header_gap
+        + column_header_h
+        + row_h
+        + row_gap
+        + section_start_buffer
+    )
 
-    for cat_key, cat_items in groups:
-        label = pretty_category(cat_key)
-
+    def ensure_section_start_room():
+        nonlocal y
         if y - min_section_start_space < bottom:
             new_page()
+
+    for group_label, cat_items in groups:
+        label = group_label
+
+        ensure_section_start_room()
 
         draw_category_header(c, left, y, usable_w, label)
         y -= (section_header_h + section_header_gap)
@@ -1305,10 +1409,7 @@ def build_pdf_compact(
         for it in cat_items:
             if y - row_h < bottom:
                 new_page()
-
-                if y - min_section_start_space < bottom:
-                    new_page()
-
+                ensure_section_start_room()
                 draw_category_header(c, left, y, usable_w, label + " (cont.)")
                 y -= (section_header_h + section_header_gap)
                 y = draw_compact_column_headings(y)
@@ -1438,7 +1539,6 @@ def list_saved_quotes(
     purge_expired_saved_quotes()
 
     results: List[Dict[str, Any]] = []
-    q_norm = normalize_search_text(q or "")
 
     if not os.path.exists(SAVED_QUOTES_DIR):
         return {"quotes": []}
@@ -1457,20 +1557,8 @@ def list_saved_quotes(
             continue
 
         summary = saved_quote_summary(payload)
-        searchable = normalize_search_text(
-            " ".join([
-                summary.get("quote_name", ""),
-                summary.get("customer_name", ""),
-                summary.get("program", ""),
-                summary.get("effective_date", ""),
-            ])
-        )
-
-        if q_norm and q_norm not in searchable:
-            q_tokens = tokenize_search_text(q_norm)
-            searchable_tokens = set(tokenize_search_text(searchable))
-            if not q_tokens or not all(tok in searchable_tokens or any(tok in st for st in searchable_tokens) for tok in q_tokens):
-                continue
+        if q and not saved_quote_matches_query(summary, q):
+            continue
 
         results.append(summary)
 
@@ -1525,6 +1613,7 @@ def save_quote(request: Request, req: SaveQuoteReq):
         "program": norm(req.program) or "TEST",
         "effective_date": norm(req.effective_date),
         "layout_mode": norm(req.layout_mode).lower() if norm(req.layout_mode).lower() in {"grid", "compact"} else "grid",
+        "categorize_by": norm(req.categorize_by).lower() if norm(req.categorize_by).lower() in {"category", "manufacturer"} else "category",
         "items": serialized_items,
         "custom_items": serialized_custom_items,
         "display_items": display_items,
@@ -1602,6 +1691,10 @@ def generate(request: Request, req: GenerateReq):
     if layout_mode not in {"grid", "compact"}:
         layout_mode = "grid"
 
+    categorize_by = norm(req.categorize_by).lower()
+    if categorize_by not in {"category", "manufacturer"}:
+        categorize_by = "category"
+
     if layout_mode == "compact":
         pdf_bytes = build_pdf_compact(
             items=picked,
@@ -1610,6 +1703,7 @@ def generate(request: Request, req: GenerateReq):
             program=norm(req.program) or "TEST",
             customer_name=norm(req.customer_name),
             effective_date=norm(req.effective_date),
+            categorize_by=categorize_by,
         )
     else:
         pdf_bytes = build_pdf_grid(
@@ -1619,6 +1713,7 @@ def generate(request: Request, req: GenerateReq):
             program=norm(req.program) or "TEST",
             customer_name=norm(req.customer_name),
             effective_date=norm(req.effective_date),
+            categorize_by=categorize_by,
         )
 
     return Response(
