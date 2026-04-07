@@ -931,7 +931,7 @@
 
         <section class="panel">
           <div class="panelTitle">Saved Quotes</div>
-          <div class="panelSub">Search and reopen quotes saved in the last 45 days.</div>
+          <div class="panelSub">Type to search saved quotes from the last 45 days.</div>
 
           <div class="savedQuotesTop">
             <div class="field">
@@ -1587,7 +1587,7 @@
 
     function renderSavedQuotes() {
       if (!savedQuotes.length) {
-        savedQuotesWrapEl.innerHTML = `<div class="empty" style="padding:18px;">No saved quotes found.</div>`;
+        savedQuotesWrapEl.innerHTML = `<div class="empty" style="padding:18px;">Start typing above to search saved quotes.</div>`;
         return;
       }
 
@@ -1618,8 +1618,16 @@
 
       try {
         const q = savedQuoteSearchEl.value.trim();
+
+        if (!q) {
+          savedQuotes = [];
+          savedQuotesWrapEl.innerHTML = `<div class="empty" style="padding:18px;">Start typing above to search saved quotes.</div>`;
+          savedQuotesStatusEl.textContent = "No saved quotes shown until you search.";
+          return;
+        }
+
         const params = new URLSearchParams();
-        if (q) params.set("q", q);
+        params.set("q", q);
         params.set("limit", "100");
 
         const res = await apiFetch(`${API_BASE}/saved-quotes?${params.toString()}`);
@@ -1630,11 +1638,9 @@
         renderSavedQuotes();
 
         if (!savedQuotes.length) {
-          savedQuotesStatusEl.textContent = q
-            ? `No saved quotes matched "${q}".`
-            : "Saved quotes auto-delete after 45 days.";
+          savedQuotesStatusEl.textContent = `No saved quotes matched "${q}".`;
         } else {
-          savedQuotesStatusEl.textContent = `Showing ${savedQuotes.length} saved quote${savedQuotes.length === 1 ? "" : "s"}. Quotes auto-delete after 45 days.`;
+          savedQuotesStatusEl.textContent = `Showing ${savedQuotes.length} saved quote${savedQuotes.length === 1 ? "" : "s"} for "${q}". Quotes auto-delete after 45 days.`;
         }
       } catch (err) {
         if (String(err?.message || err) !== "Unauthorized") {
@@ -1691,8 +1697,14 @@
         currentSavedQuoteId = data?.quote?.quote_id || currentSavedQuoteId;
         updateLoadedQuotePill();
 
-        savedQuotesStatusEl.innerHTML = `<span class="successFlash">Saved "${escapeHtml(quoteName)}".</span>`;
-        await fetchSavedQuotes(false);
+        if (savedQuoteSearchEl.value.trim()) {
+          savedQuotesStatusEl.innerHTML = `<span class="successFlash">Saved "${escapeHtml(quoteName)}".</span>`;
+          await fetchSavedQuotes(false);
+        } else {
+          savedQuotes = [];
+          savedQuotesWrapEl.innerHTML = `<div class="empty" style="padding:18px;">Start typing above to search saved quotes.</div>`;
+          savedQuotesStatusEl.innerHTML = `<span class="successFlash">Saved "${escapeHtml(quoteName)}". It will stay hidden until you search.</span>`;
+        }
       } catch (err) {
         if (String(err?.message || err) !== "Unauthorized") {
           console.error(err);
