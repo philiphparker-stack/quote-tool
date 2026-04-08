@@ -1,0 +1,215 @@
+{
+  "quote_id": "c4f42cb2ebad4a8fafb9944b7ed3d3fb",
+  "quote_name": "Guru Test",
+  "customer_name": "",
+  "program": "TEST",
+  "effective_date": "2026-04-06",
+  "layout_mode": "compact",
+  "categorize_by": "manufacturer",
+  "items": [
+    {
+      "id": "ZBL300-280-XXX",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZBL300-285-XXX",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZHAFHB25",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZHABOARD4814",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZCFCAC***10S or NS",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZINBB24",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZINBB30",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZININVISABOLT-1",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZGUIMU9404",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZGUIMU9201",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZGUIZU0009",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    }
+  ],
+  "custom_items": [],
+  "display_items": [
+    {
+      "id": "ZBL300-280-XXX",
+      "name": "EDGE PROTECTOR STAINLESS STEEL (NATURAL)",
+      "manufacturer": "BLANKE",
+      "category": "TRIM",
+      "uom": "LF",
+      "price_direct": 13.0,
+      "price_oow": 12.0,
+      "image": "blanke/300-280-xxx.webp",
+      "aliases": "",
+      "search_terms": "EDGE PROTECTOR BLANKE ZBL300-280-XXX EDGE PROTECTOR STAINLESS STEEL (NATURAL)"
+    },
+    {
+      "id": "ZBL300-285-XXX",
+      "name": "EDGE PROTECTOR STAINLESS STEEL",
+      "manufacturer": "BLANKE",
+      "category": "TRIM",
+      "uom": "LF",
+      "price_direct": 13.0,
+      "price_oow": 12.0,
+      "image": "blanke/300-285-xxx.webp",
+      "aliases": "",
+      "search_terms": "EDGE PROTECTOR BLANKE ZBL300-285-XXX EDGE PROTECTOR STAINLESS STEEL"
+    },
+    {
+      "id": "ZHAFHB25",
+      "name": "1/4\" HARDIEBACKER BOARD",
+      "manufacturer": "JAMES HARDIE",
+      "category": "BACKERBOARD",
+      "uom": "ea",
+      "price_direct": 142.0,
+      "price_oow": 255.60000000000002,
+      "image": "hardie/hardie14.webp",
+      "aliases": "",
+      "search_terms": "BACKERBOARD JAMES HARDIE ZHAFHB25 1/4\" HARDIEBACKER BOARD"
+    },
+    {
+      "id": "ZHABOARD4814",
+      "name": "HARDIBACKER BOARD 4'X8'X1/4",
+      "manufacturer": "JAMES HARDIE",
+      "category": "BACKERBOARD",
+      "uom": "ea",
+      "price_direct": 286.0,
+      "price_oow": 514.8,
+      "image": "hardie/hardie14.webp",
+      "aliases": "",
+      "search_terms": "BACKERBOARD JAMES HARDIE ZHABOARD4814 HARDIBACKER BOARD 4'X8'X1/4"
+    },
+    {
+      "id": "ZCFCAC***10S or NS",
+      "name": "COLORFAST S or NS 10.3Z",
+      "manufacturer": "COLORFAST ACRYLIC CAULK",
+      "category": "CAULK",
+      "uom": "ea",
+      "price_direct": 161.0,
+      "price_oow": 289.8,
+      "image": "custom/colorfast.webp",
+      "aliases": "",
+      "search_terms": "CAULK COLORFAST ACRYLIC CAULK ZCFCAC***10S or NS COLORFAST S or NS 10.3Z"
+    },
+    {
+      "id": "ZINBB24",
+      "name": "TRIANGULAR BENCH 24\"",
+      "manufacturer": "INNOVIS CORPORATION",
+      "category": "BENCH",
+      "uom": "ea",
+      "price_direct": 208.0,
+      "price_oow": 374.4,
+      "image": "innovis/tribench.webp",
+      "aliases": "",
+      "search_terms": "BENCH INNOVIS CORPORATION ZINBB24 TRIANGULAR BENCH 24\""
+    },
+    {
+      "id": "ZINBB30",
+      "name": "TRIANGULAR BENCH 30\"",
+      "manufacturer": "INNOVIS CORPORATION",
+      "category": "BENCH",
+      "uom": "ea",
+      "price_direct": 199.0,
+      "price_oow": 358.20000000000005,
+      "image": "innovis/tribench.webp",
+      "aliases": "",
+      "search_terms": "BENCH INNOVIS CORPORATION ZINBB30 TRIANGULAR BENCH 30\""
+    },
+    {
+      "id": "ZININVISABOLT-1",
+      "name": "BETTER-BENCH INVISABOLT 2/PK",
+      "manufacturer": "INNOVIS CORPORATION",
+      "category": "BENCH",
+      "uom": "ea",
+      "price_direct": 273.0,
+      "price_oow": 491.4,
+      "image": "comingsoon.webp",
+      "aliases": "",
+      "search_terms": "BENCH INNOVIS CORPORATION ZININVISABOLT-1 BETTER-BENCH INVISABOLT 2/PK"
+    },
+    {
+      "id": "ZGUIMU9404",
+      "name": "HD PRE-SLOPE SHWR TRAY 36\"X60\"",
+      "manufacturer": "GURU SHOWER SYSTEMS",
+      "category": "PRE-SLOPED SHOWER PANS",
+      "uom": "ea",
+      "price_direct": 228.0,
+      "price_oow": 410.4,
+      "image": "guru/showertrayguru.webp",
+      "aliases": "",
+      "search_terms": "PRE-SLOPED SHOWER PANS GURU SHOWER SYSTEMS ZGUIMU9404 HD PRE-SLOPE SHWR TRAY 36\"X60\""
+    },
+    {
+      "id": "ZGUIMU9201",
+      "name": "HD PRE-SLOPE SHWR TRAY 48\"X48\"",
+      "manufacturer": "GURU SHOWER SYSTEMS",
+      "category": "PRE-SLOPED SHOWER PANS",
+      "uom": "ea",
+      "price_direct": 34.0,
+      "price_oow": 61.2,
+      "image": "guru/showertrayguru.webp",
+      "aliases": "",
+      "search_terms": "PRE-SLOPED SHOWER PANS GURU SHOWER SYSTEMS ZGUIMU9201 HD PRE-SLOPE SHWR TRAY 48\"X48\""
+    },
+    {
+      "id": "ZGUIZU0009",
+      "name": "SHELF BEAT TRAPEZOID GOLD",
+      "manufacturer": "GURU SHOWER SYSTEMS",
+      "category": "SHELVES",
+      "uom": "ea",
+      "price_direct": 239.0,
+      "price_oow": 430.20000000000005,
+      "image": "guru/trapgold.webp",
+      "aliases": "",
+      "search_terms": "SHELVES GURU SHOWER SYSTEMS ZGUIZU0009 SHELF BEAT TRAPEZOID GOLD"
+    }
+  ],
+  "customer_logo_data": null,
+  "created_at": "2026-04-07T03:49:12+00:00",
+  "updated_at": "2026-04-07T03:49:12+00:00"
+}
