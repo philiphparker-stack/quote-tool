@@ -1,0 +1,215 @@
+{
+  "quote_id": "1bdaf2ef68cf4c088dccd36c22b4cb78",
+  "quote_name": "test 1",
+  "customer_name": "test1",
+  "program": "TEST",
+  "effective_date": "2026-04-07",
+  "layout_mode": "grid",
+  "categorize_by": "category",
+  "items": [
+    {
+      "id": "ZCUUWAT5",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZCUUAWAT5",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZCUCP1",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZCULQ50",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZCUCPMBP1",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZCUCPMBP3",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZTETA704",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZTE15035588",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZTE10014526",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZTE15035590",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    },
+    {
+      "id": "ZTE15035581",
+      "pricing_mode": "oow",
+      "oow_price": null,
+      "direct_price": null
+    }
+  ],
+  "custom_items": [],
+  "display_items": [
+    {
+      "id": "ZCUUWAT5",
+      "name": "CUSTOM WOOD UR 5 GAL",
+      "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
+      "category": "ADHESIVE",
+      "uom": "ea",
+      "price_direct": 142.0,
+      "price_oow": 255.60000000000002,
+      "image": "custom/customwoodur.webp",
+      "aliases": "",
+      "search_terms": "ADHESIVE CUSTOM BUILDING PRODUCTS, INC. ZCUUWAT5 CUSTOM WOOD UR 5 GAL"
+    },
+    {
+      "id": "ZCUUAWAT5",
+      "name": "CUSTOM WOOD UR4 5 GAL",
+      "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
+      "category": "ADHESIVE",
+      "uom": "ea",
+      "price_direct": 257.0,
+      "price_oow": 462.6,
+      "image": "custom/woodur4.webp",
+      "aliases": "",
+      "search_terms": "ADHESIVE CUSTOM BUILDING PRODUCTS, INC. ZCUUAWAT5 CUSTOM WOOD UR4 5 GAL"
+    },
+    {
+      "id": "ZCUCP1",
+      "name": "LEVEL QUIK LATEX PRIMER 1GL",
+      "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
+      "category": "SELF LEVELING",
+      "uom": "ea",
+      "price_direct": 116.0,
+      "price_oow": 208.8,
+      "image": "comingsoon.webp",
+      "aliases": "",
+      "search_terms": "SELF LEVELING CUSTOM BUILDING PRODUCTS, INC. ZCUCP1 LEVEL QUIK LATEX PRIMER 1GL"
+    },
+    {
+      "id": "ZCULQ50",
+      "name": "LEVEL QUIK RAPID SETTING 50LB",
+      "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
+      "category": "SELF LEVELING",
+      "uom": "ea",
+      "price_direct": 81.0,
+      "price_oow": 145.8,
+      "image": "comingsoon.webp",
+      "aliases": "",
+      "search_terms": "SELF LEVELING CUSTOM BUILDING PRODUCTS, INC. ZCULQ50 LEVEL QUIK RAPID SETTING 50LB"
+    },
+    {
+      "id": "ZCUCPMBP1",
+      "name": "MULTI SURFCE BONDING PRIMER 1G",
+      "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
+      "category": "PRIMER",
+      "uom": "ea",
+      "price_direct": 103.0,
+      "price_oow": 185.4,
+      "image": "comingsoon.webp",
+      "aliases": "",
+      "search_terms": "PRIMER CUSTOM BUILDING PRODUCTS, INC. ZCUCPMBP1 MULTI SURFCE BONDING PRIMER 1G"
+    },
+    {
+      "id": "ZCUCPMBP3",
+      "name": "MS BONDING PRIMER 3.5 GAL",
+      "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
+      "category": "PRIMER",
+      "uom": "ea",
+      "price_direct": 210.0,
+      "price_oow": 378.0,
+      "image": "comingsoon.webp",
+      "aliases": "",
+      "search_terms": "PRIMER CUSTOM BUILDING PRODUCTS, INC. ZCUCPMBP3 MS BONDING PRIMER 3.5 GAL"
+    },
+    {
+      "id": "ZTETA704",
+      "name": "PREMIUM FAST GRAB 704 CARPET ADHESIVE",
+      "manufacturer": "TEC",
+      "category": "ADHESIVE",
+      "uom": "ea",
+      "price_direct": 61.0,
+      "price_oow": 109.80000000000001,
+      "image": "tec/704fastgrab.webp",
+      "aliases": "",
+      "search_terms": "ADHESIVE TEC ZTETA704 PREMIUM FAST GRAB 704 CARPET ADHESIVE"
+    },
+    {
+      "id": "ZTE15035588",
+      "name": "VINYL COMPOS. TILE ADHES 3.5 G",
+      "manufacturer": "TEC",
+      "category": "ADHESIVE",
+      "uom": "ea",
+      "price_direct": 35.0,
+      "price_oow": 63.0,
+      "image": "vinylcompo.webp",
+      "aliases": "",
+      "search_terms": "ADHESIVE TEC ZTE15035588 VINYL COMPOS. TILE ADHES 3.5 G"
+    },
+    {
+      "id": "ZTE10014526",
+      "name": "WOOD SECURE 4 GALLON",
+      "manufacturer": "TEC",
+      "category": "ADHESIVE",
+      "uom": "ea",
+      "price_direct": 191.0,
+      "price_oow": 343.8,
+      "image": "tec/woodsecure.webp",
+      "aliases": "",
+      "search_terms": "ADHESIVE TEC ZTE10014526 WOOD SECURE 4 GALLON"
+    },
+    {
+      "id": "ZTE15035590",
+      "name": "VINYL COMPOS. TILE ADHES 1 GAL",
+      "manufacturer": "TEC",
+      "category": "ADHESIVE",
+      "uom": "ea",
+      "price_direct": 68.0,
+      "price_oow": 122.4,
+      "image": "vinylcompo.webp",
+      "aliases": "",
+      "search_terms": "ADHESIVE TEC ZTE15035590 VINYL COMPOS. TILE ADHES 1 GAL"
+    },
+    {
+      "id": "ZTE15035581",
+      "name": "INDOOR/OUTDOOR CARPET ADH 3.5G",
+      "manufacturer": "TEC",
+      "category": "ADHESIVE",
+      "uom": "ea",
+      "price_direct": 130.0,
+      "price_oow": 234.0,
+      "image": "tec/indooroutdoorcarpet.webp",
+      "aliases": "",
+      "search_terms": "ADHESIVE TEC ZTE15035581 INDOOR/OUTDOOR CARPET ADH 3.5G"
+    }
+  ],
+  "customer_logo_data": null,
+  "created_at": "2026-04-08T01:36:40+00:00",
+  "updated_at": "2026-04-08T01:36:40+00:00"
+}

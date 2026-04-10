@@ -77,6 +77,8 @@ class SelectedItemReq(BaseModel):
     pricing_mode: Optional[str] = "oow"  # oow / direct / both
     oow_price: Optional[Any] = None
     direct_price: Optional[Any] = None
+    variant_size: Optional[str] = None
+    variant_sku: Optional[str] = None
 
 
 class GenerateReq(BaseModel):
@@ -265,6 +267,8 @@ def filter_items(
             "image": norm(it.get("image")),
             "aliases": norm(it.get("aliases")),
             "search_terms": norm(it.get("search_terms")),
+            "has_variants": bool(it.get("has_variants")),
+            "variants": it.get("variants") if isinstance(it.get("variants"), list) else [],
         })
 
         if len(out) >= limit:
@@ -303,6 +307,19 @@ def pretty_category(cat: str) -> str:
 def category_sort_key(cat: str) -> int:
     cat = norm(cat).upper()
     return CATEGORY_ORDER.get(cat, 999)
+
+
+MANUFACTURER_DISPLAY_NAMES = {
+    "CUSTOM BUILDING PRODUCTS": "Custom",
+    "CUSTOM BUILDING PRODUCTS, INC.": "Custom",
+}
+
+
+def pretty_manufacturer(name: str) -> str:
+    raw = norm(name)
+    if not raw:
+        return ""
+    return MANUFACTURER_DISPLAY_NAMES.get(raw.upper(), raw)
 
 
 # ============================================================
@@ -351,7 +368,7 @@ def get_price_lines(it: Dict[str, Any], legacy_mode: str) -> List[str]:
 
         lines: List[str] = []
         if pricing_mode in {"oow", "both"}:
-            txt = fmt_single_price("OOW", oow_price, uom)
+            txt = fmt_single_price("Warehouse", oow_price, uom)
             if txt:
                 lines.append(txt)
         if pricing_mode in {"direct", "both"}:
@@ -364,7 +381,7 @@ def get_price_lines(it: Dict[str, Any], legacy_mode: str) -> List[str]:
     if price_val is None:
         return []
 
-    label = "Direct" if legacy_mode == "direct" else "OOW"
+    label = "Direct" if legacy_mode == "direct" else "Warehouse"
     return [fmt_single_price(label, price_val, uom)]
 
 
@@ -443,12 +460,16 @@ def build_display_items_for_saved_quote(
     items_map: Dict[str, Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
+    seen_ids: set[str] = set()
 
     for selected in selected_items:
         item_id = norm(selected.id)
         base = items_map.get(item_id)
         if not base:
             continue
+        if item_id in seen_ids:
+            continue
+        seen_ids.add(item_id)
 
         out.append({
             "id": norm(base.get("id")),
@@ -461,6 +482,8 @@ def build_display_items_for_saved_quote(
             "image": norm(base.get("image")),
             "aliases": norm(base.get("aliases")),
             "search_terms": norm(base.get("search_terms")),
+            "has_variants": bool(base.get("has_variants")),
+            "variants": base.get("variants") if isinstance(base.get("variants"), list) else [],
         })
 
     return out
@@ -478,6 +501,8 @@ def serialize_selected_items(items: Optional[List[SelectedItemReq]]) -> List[Dic
             "pricing_mode": pricing_mode,
             "oow_price": selected.oow_price,
             "direct_price": selected.direct_price,
+            "variant_size": norm(selected.variant_size),
+            "variant_sku": norm(selected.variant_sku),
         })
     return out
 
@@ -866,7 +891,7 @@ def draw_header(
 
     c.setFillColor(BRAND_BLUE_DARK)
     c.setFont("Helvetica-Bold", 18)
-    c.drawCentredString(W / 2, H - 38, "Local Market Stocking Program")
+    c.drawCentredString(W / 2, H - 38, "Product Pricing Summary")
 
     c.setFillColor(SOFT_TEXT)
     c.setFont("Helvetica-Bold", 10)
@@ -881,8 +906,7 @@ def draw_header(
     c.setFillColor(colors.black)
     c.drawString(left_x, row1_y, f"Customer: {customer_name or '—'}")
 
-    c.drawRightString(right_x, row1_y, f"Program: {program or 'TEST'}")
-    c.drawRightString(right_x, row2_y, f"Effective Date: {effective_date or '—'}")
+    c.drawRightString(right_x, row1_y, f"Effective Date: {effective_date or '—'}")
 
     divider_y = H - 132
     c.setStrokeColor(colors.Color(0, 0, 0, alpha=0.18))
@@ -982,7 +1006,7 @@ def draw_card(
 
     mfr_lines, mfr_size = fit_lines(
         c,
-        norm(it.get("manufacturer")),
+        pretty_manufacturer(norm(it.get("manufacturer"))),
         meta_w,
         "Helvetica",
         max_lines=2,
@@ -1021,6 +1045,7 @@ def draw_compact_row(
     row_h: float,
     it: Dict[str, Any],
     fallback_mode: str,
+    categorize_by: str = "category",
 ):
     c.setStrokeColor(colors.Color(0, 0, 0, alpha=0.12))
     c.setFillColor(colors.white)
@@ -1053,8 +1078,8 @@ def draw_compact_row(
 
     name_x = x + 44
     sku_x = x + 290
-    mfr_x = x + 382
-    price_x = x + 490
+    detail_x = x + 360
+    price_x = x + 455
 
     text_y = y_top - 21
 
@@ -1068,15 +1093,20 @@ def draw_compact_row(
     sku_txt, _ = fit_one_line(c, norm(it.get("id")), 84, "Helvetica", 7.3, 6.0)
     c.drawString(sku_x, text_y, sku_txt)
 
-    mfr_txt, _ = fit_one_line(c, norm(it.get("manufacturer")), 100, "Helvetica", 7.3, 6.0)
-    c.drawString(mfr_x, text_y, mfr_txt)
+    if norm(categorize_by).lower() == "manufacturer":
+        detail_value = pretty_category(norm(it.get("category")) or "OTHER")
+    else:
+        detail_value = pretty_manufacturer(norm(it.get("manufacturer")))
+
+    detail_txt, _ = fit_one_line(c, detail_value, 88, "Helvetica", 7.1, 5.8)
+    c.drawString(detail_x, text_y, detail_txt)
 
     price_lines = get_price_lines(it, fallback_mode)
     c.setFont("Helvetica-Bold", 7.3)
     c.setFillColor(colors.black)
     price_y = text_y
     for line in price_lines[:2]:
-        draw_txt, _ = fit_one_line(c, line, 86, "Helvetica-Bold", 7.3, 6.0)
+        draw_txt, _ = fit_one_line(c, line, 125, "Helvetica-Bold", 7.1, 5.8)
         c.drawString(price_x, price_y, draw_txt)
         price_y -= 9
 
@@ -1379,8 +1409,9 @@ def build_pdf_compact(
         c.setFillColor(SOFT_TEXT)
         c.drawString(left + 44, y_top - 2, "Description")
         c.drawString(left + 290, y_top - 2, "SKU")
-        c.drawString(left + 382, y_top - 2, "Manufacturer")
-        c.drawString(left + 490, y_top - 2, "Pricing")
+        third_heading = "Category" if norm(categorize_by).lower() == "manufacturer" else "Manufacturer"
+        c.drawString(left + 360, y_top - 2, third_heading)
+        c.drawString(left + 455, y_top - 2, "Pricing")
         return y_top - column_header_h
 
     min_section_start_space = (
@@ -1414,7 +1445,7 @@ def build_pdf_compact(
                 y -= (section_header_h + section_header_gap)
                 y = draw_compact_column_headings(y)
 
-            draw_compact_row(c, left, y, usable_w, row_h, it, fallback_mode)
+            draw_compact_row(c, left, y, usable_w, row_h, it, fallback_mode, categorize_by=categorize_by)
             y -= (row_h + row_gap)
 
         y -= 4
@@ -1652,6 +1683,13 @@ def generate(request: Request, req: GenerateReq):
             pricing_mode = norm(selected.pricing_mode).lower()
             if pricing_mode not in {"oow", "direct", "both"}:
                 pricing_mode = "oow"
+
+            variant_sku = norm(selected.variant_sku)
+            variant_size = norm(selected.variant_size)
+            if variant_sku:
+                base["id"] = variant_sku
+            if variant_size:
+                base["name"] = f'{norm(base.get("name"))} {variant_size}'.strip()
 
             base["_pricing_mode"] = pricing_mode
             base["_override_oow_price"] = try_float(selected.oow_price)

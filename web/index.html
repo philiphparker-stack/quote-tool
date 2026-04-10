@@ -1018,6 +1018,84 @@
       margin-top:4px;
     }
 
+    .blankeFamilyCard{
+      background:#fff;
+      border:1px solid #d8dee6;
+      border-radius:16px;
+      padding:12px;
+      box-shadow:0 6px 18px rgba(16,24,40,.04);
+      display:grid;
+      gap:10px;
+    }
+
+    .blankeFamilyHead{
+      display:grid;
+      grid-template-columns: 64px minmax(0, 1fr);
+      gap:12px;
+      align-items:start;
+    }
+
+    .blankeFamilyMeta{
+      min-width:0;
+    }
+
+    .blankeFamilyName{
+      font-size:14px;
+      font-weight:900;
+      line-height:1.12;
+      margin:0 0 5px;
+      color:var(--brand-dark);
+      word-break:break-word;
+    }
+
+    .blankeFamilySub{
+      font-size:11px;
+      color:#667085;
+      margin:0 0 2px;
+      word-break:break-word;
+    }
+
+    .blankeVariantList{
+      display:grid;
+      gap:8px;
+      margin-top:2px;
+    }
+
+    .blankeVariantRow{
+      border:1px solid #d8dee6;
+      border-radius:12px;
+      background:#fbfcfe;
+      padding:10px 10px 8px;
+      display:grid;
+      gap:8px;
+    }
+
+    .blankeVariantTop{
+      display:grid;
+      grid-template-columns: 24px minmax(72px, 90px) minmax(0, 1fr);
+      gap:10px;
+      align-items:center;
+    }
+
+    .blankeVariantSize{
+      font-size:13px;
+      font-weight:900;
+      color:#1d2939;
+      white-space:nowrap;
+    }
+
+    .blankeVariantSku{
+      font-size:11px;
+      color:#667085;
+      word-break:break-word;
+    }
+
+    .blankeVariantControls{
+      padding-left:34px;
+      display:grid;
+      gap:7px;
+    }
+
     @media (max-width: 1280px){
       .stickyFilters{
         position:relative;
@@ -1303,7 +1381,7 @@
                 <div class="settingsRowTwo">
                   <div class="field">
                     <label for="quoteName">Quote Name</label>
-                    <input id="quoteName" type="text" placeholder="Ex: Hillman Flooring" />
+                    <input id="quoteName" type="text" placeholder="Ex: Thinset Stocking Program" />
                   </div>
 
                   <div class="field">
@@ -1653,6 +1731,229 @@
       updateLoadedQuotePill();
     }
 
+
+    function isBlankeVariantItem(item) {
+      return String(item?.manufacturer || "").toUpperCase() === "BLANKE"
+        && Array.isArray(item?.variants)
+        && item.variants.length > 0;
+    }
+
+    function makeBlankeVariantKey(parentId, sku, size) {
+      return `BLANKEVAR::${parentId}::${sku}::${size}`;
+    }
+
+    function parseSelectedKey(key) {
+      const raw = String(key || "");
+      if (!raw.startsWith("BLANKEVAR::")) {
+        return { type: "regular", id: raw };
+      }
+      const parts = raw.split("::");
+      return {
+        type: "blankeVariant",
+        parentId: parts[1] || "",
+        sku: parts[2] || "",
+        size: parts.slice(3).join("::") || ""
+      };
+    }
+
+    function variantKeyForItem(parentItem, variant) {
+      return makeBlankeVariantKey(parentItem.id, variant.sku || "", variant.size || "");
+    }
+
+    function normalizeVariantLabel(variant) {
+      return String(variant?.size || "").trim() || String(variant?.sku || "").trim() || "Variant";
+    }
+
+    function familyVisibleVariantCount(item) {
+      if (!isBlankeVariantItem(item)) return 0;
+      if (!showSelectedOnly) return item.variants.length;
+      return item.variants.filter(variant => selectedIds.has(variantKeyForItem(item, variant))).length;
+    }
+
+    function buildDisplayEntries(items) {
+      const entries = [];
+      for (const item of items || []) {
+        if (isBlankeVariantItem(item)) {
+          const visibleCount = familyVisibleVariantCount(item);
+          if (!showSelectedOnly || visibleCount > 0) {
+            entries.push({ type: "blankeFamily", item });
+          }
+        } else {
+          if (!showSelectedOnly || selectedIds.has(item.id)) {
+            entries.push({ type: "regular", item });
+          }
+        }
+      }
+      return entries;
+    }
+
+    function renderRegularItemCard(item) {
+      const checked = selectedIds.has(item.id);
+      const cfg = ensurePriceConfig(item);
+
+      return `
+          <div class="itemCard ${checked ? "selected" : ""}" data-item-id="${escapeHtml(item.id)}">
+            <div class="checkWrap">
+              <input type="checkbox" class="itemCheck" data-id="${escapeHtml(item.id)}" ${checked ? "checked" : ""}/>
+            </div>
+
+            <div class="thumb">
+              <img
+                data-src="${getImageSrc(item)}"
+                alt="${escapeHtml(item.name)}"
+                loading="lazy"
+                decoding="async"
+                onload="handleLazyImageLoad(this)"
+                onerror="handleLazyImageError(this)"
+              />
+            </div>
+
+            <div class="itemBody">
+              <div class="itemName">${escapeHtml(item.name)}</div>
+              <div class="itemMeta">${escapeHtml(item.manufacturer || "")}</div>
+              <div class="itemMeta">${escapeHtml(item.id || "")}</div>
+              <div class="itemMeta">${escapeHtml(item.category || "")}</div>
+
+              <div class="pricingModeRow">
+                <label for="mode_${escapeHtml(item.id)}">Pricing</label>
+                <select id="mode_${escapeHtml(item.id)}" class="pricingModeSelect" data-id="${escapeHtml(item.id)}">
+                  <option value="oow" ${cfg.mode === "oow" ? "selected" : ""}>Warehouse Only</option>
+                  <option value="direct" ${cfg.mode === "direct" ? "selected" : ""}>Direct Only</option>
+                  <option value="both" ${cfg.mode === "both" ? "selected" : ""}>Both</option>
+                </select>
+              </div>
+
+              ${(cfg.mode === "oow" || cfg.mode === "both") ? `
+                <div class="overrideRow">
+                  <label for="oow_${escapeHtml(item.id)}">Warehouse</label>
+                  <input
+                    id="oow_${escapeHtml(item.id)}"
+                    type="text"
+                    class="priceInput"
+                    data-id="${escapeHtml(item.id)}"
+                    data-type="oow"
+                    inputmode="decimal"
+                    placeholder="ex: 29.50"
+                    value="${escapeHtml(cfg.oow)}"
+                  />
+                </div>
+              ` : ""}
+
+              ${(cfg.mode === "direct" || cfg.mode === "both") ? `
+                <div class="overrideRow">
+                  <label for="direct_${escapeHtml(item.id)}">Direct</label>
+                  <input
+                    id="direct_${escapeHtml(item.id)}"
+                    type="text"
+                    class="priceInput"
+                    data-id="${escapeHtml(item.id)}"
+                    data-type="direct"
+                    inputmode="decimal"
+                    placeholder="ex: 24.75"
+                    value="${escapeHtml(cfg.direct)}"
+                  />
+                </div>
+              ` : ""}
+            </div>
+          </div>
+      `;
+    }
+
+    function renderBlankeFamilyCard(item) {
+      const visibleVariants = showSelectedOnly
+        ? item.variants.filter(variant => selectedIds.has(variantKeyForItem(item, variant)))
+        : item.variants;
+
+      const variantRows = visibleVariants.map(variant => {
+        const variantKey = variantKeyForItem(item, variant);
+        const checked = selectedIds.has(variantKey);
+        const cfg = ensurePriceConfig({ id: variantKey });
+        return `
+          <div class="blankeVariantRow ${checked ? "selected" : ""}">
+            <div class="blankeVariantTop">
+              <div class="checkWrap">
+                <input type="checkbox" class="blankeVariantCheck" data-variant-key="${escapeHtml(variantKey)}" ${checked ? "checked" : ""}/>
+              </div>
+              <div class="blankeVariantSize">${escapeHtml(normalizeVariantLabel(variant))}</div>
+              <div class="blankeVariantSku">${escapeHtml(variant.sku || "")}</div>
+            </div>
+
+            ${checked ? `
+              <div class="blankeVariantControls">
+                <div class="pricingModeRow">
+                  <label for="mode_${escapeHtml(variantKey)}">Pricing</label>
+                  <select id="mode_${escapeHtml(variantKey)}" class="blankePricingModeSelect" data-variant-key="${escapeHtml(variantKey)}">
+                    <option value="oow" ${cfg.mode === "oow" ? "selected" : ""}>Warehouse Only</option>
+                    <option value="direct" ${cfg.mode === "direct" ? "selected" : ""}>Direct Only</option>
+                    <option value="both" ${cfg.mode === "both" ? "selected" : ""}>Both</option>
+                  </select>
+                </div>
+
+                ${(cfg.mode === "oow" || cfg.mode === "both") ? `
+                  <div class="overrideRow">
+                    <label for="oow_${escapeHtml(variantKey)}">Warehouse</label>
+                    <input
+                      id="oow_${escapeHtml(variantKey)}"
+                      type="text"
+                      class="blankePriceInput"
+                      data-variant-key="${escapeHtml(variantKey)}"
+                      data-type="oow"
+                      inputmode="decimal"
+                      placeholder="ex: 29.50"
+                      value="${escapeHtml(cfg.oow)}"
+                    />
+                  </div>
+                ` : ""}
+
+                ${(cfg.mode === "direct" || cfg.mode === "both") ? `
+                  <div class="overrideRow">
+                    <label for="direct_${escapeHtml(variantKey)}">Direct</label>
+                    <input
+                      id="direct_${escapeHtml(variantKey)}"
+                      type="text"
+                      class="blankePriceInput"
+                      data-variant-key="${escapeHtml(variantKey)}"
+                      data-type="direct"
+                      inputmode="decimal"
+                      placeholder="ex: 24.75"
+                      value="${escapeHtml(cfg.direct)}"
+                    />
+                  </div>
+                ` : ""}
+              </div>
+            ` : ""}
+          </div>
+        `;
+      }).join("");
+
+      return `
+        <div class="blankeFamilyCard" data-item-id="${escapeHtml(item.id)}">
+          <div class="blankeFamilyHead">
+            <div class="thumb">
+              <img
+                data-src="${getImageSrc(item)}"
+                alt="${escapeHtml(item.name)}"
+                loading="lazy"
+                decoding="async"
+                onload="handleLazyImageLoad(this)"
+                onerror="handleLazyImageError(this)"
+              />
+            </div>
+
+            <div class="blankeFamilyMeta">
+              <div class="blankeFamilyName">${escapeHtml(item.name)}</div>
+              <div class="blankeFamilySub">${escapeHtml(item.manufacturer || "")}</div>
+              <div class="blankeFamilySub">${escapeHtml(item.category || "")}</div>
+            </div>
+          </div>
+
+          <div class="blankeVariantList">
+            ${variantRows}
+          </div>
+        </div>
+      `;
+    }
+
     function ensurePriceConfig(item) {
       if (!priceConfigs[item.id]) {
         priceConfigs[item.id] = {
@@ -1782,13 +2083,22 @@
       return selectedOnlyItemsCache;
     }
 
+    
     function renderItems() {
       const visibleItems = getVisibleItems();
-      showingCountEl.textContent = showSelectedOnly
-        ? `Showing ${visibleItems.length} selected item${visibleItems.length === 1 ? "" : "s"}`
-        : `Showing ${currentItems.length} items`;
+      const displayEntries = buildDisplayEntries(visibleItems);
+      const displayedCount = displayEntries.reduce((count, entry) => {
+        if (entry.type === "blankeFamily") {
+          return count + familyVisibleVariantCount(entry.item);
+        }
+        return count + 1;
+      }, 0);
 
-      if (!visibleItems.length) {
+      showingCountEl.textContent = showSelectedOnly
+        ? `Showing ${displayedCount} selected item${displayedCount === 1 ? "" : "s"}`
+        : `Showing ${displayedCount} item${displayedCount === 1 ? "" : "s"}`;
+
+      if (!displayEntries.length || !displayedCount) {
         itemsWrapEl.innerHTML = showSelectedOnly
           ? `<div class="empty">No selected items found. Click "Selected" again to return to normal view.</div>`
           : `<div class="empty">No products found.</div>`;
@@ -1798,76 +2108,11 @@
         return;
       }
 
-      const html = visibleItems.map(item => {
-        const checked = selectedIds.has(item.id);
-        const cfg = ensurePriceConfig(item);
-
-        return `
-          <div class="itemCard ${checked ? "selected" : ""}" data-item-id="${escapeHtml(item.id)}">
-            <div class="checkWrap">
-              <input type="checkbox" class="itemCheck" data-id="${escapeHtml(item.id)}" ${checked ? "checked" : ""}/>
-            </div>
-
-            <div class="thumb">
-              <img
-                data-src="${getImageSrc(item)}"
-                alt="${escapeHtml(item.name)}"
-                loading="lazy"
-                decoding="async"
-                onload="handleLazyImageLoad(this)"
-                onerror="handleLazyImageError(this)"
-              />
-            </div>
-
-            <div class="itemBody">
-              <div class="itemName">${escapeHtml(item.name)}</div>
-              <div class="itemMeta">${escapeHtml(item.manufacturer || "")}</div>
-              <div class="itemMeta">${escapeHtml(item.id || "")}</div>
-              <div class="itemMeta">${escapeHtml(item.category || "")}</div>
-
-              <div class="pricingModeRow">
-                <label for="mode_${escapeHtml(item.id)}">Pricing</label>
-                <select id="mode_${escapeHtml(item.id)}" class="pricingModeSelect" data-id="${escapeHtml(item.id)}">
-                  <option value="oow" ${cfg.mode === "oow" ? "selected" : ""}>OOW Only</option>
-                  <option value="direct" ${cfg.mode === "direct" ? "selected" : ""}>Direct Only</option>
-                  <option value="both" ${cfg.mode === "both" ? "selected" : ""}>Both</option>
-                </select>
-              </div>
-
-              ${(cfg.mode === "oow" || cfg.mode === "both") ? `
-                <div class="overrideRow">
-                  <label for="oow_${escapeHtml(item.id)}">OOW</label>
-                  <input
-                    id="oow_${escapeHtml(item.id)}"
-                    type="text"
-                    class="priceInput"
-                    data-id="${escapeHtml(item.id)}"
-                    data-type="oow"
-                    inputmode="decimal"
-                    placeholder="ex: 29.50"
-                    value="${escapeHtml(cfg.oow)}"
-                  />
-                </div>
-              ` : ""}
-
-              ${(cfg.mode === "direct" || cfg.mode === "both") ? `
-                <div class="overrideRow">
-                  <label for="direct_${escapeHtml(item.id)}">Direct</label>
-                  <input
-                    id="direct_${escapeHtml(item.id)}"
-                    type="text"
-                    class="priceInput"
-                    data-id="${escapeHtml(item.id)}"
-                    data-type="direct"
-                    inputmode="decimal"
-                    placeholder="ex: 24.75"
-                    value="${escapeHtml(cfg.direct)}"
-                  />
-                </div>
-              ` : ""}
-            </div>
-          </div>
-        `;
+      const html = displayEntries.map(entry => {
+        if (entry.type === "blankeFamily") {
+          return renderBlankeFamilyCard(entry.item);
+        }
+        return renderRegularItemCard(entry.item);
       }).join("");
 
       itemsWrapEl.innerHTML = `<div class="productsGrid">${html}</div>`;
@@ -1877,6 +2122,16 @@
         cb.addEventListener("click", e => e.stopPropagation());
         cb.addEventListener("change", e => {
           const id = e.target.dataset.id;
+          if (e.target.checked) selectedIds.add(id);
+          else selectedIds.delete(id);
+          renderItems();
+        });
+      });
+
+      document.querySelectorAll(".blankeVariantCheck").forEach(cb => {
+        cb.addEventListener("click", e => e.stopPropagation());
+        cb.addEventListener("change", e => {
+          const id = e.target.dataset.variantKey;
           if (e.target.checked) selectedIds.add(id);
           else selectedIds.delete(id);
           renderItems();
@@ -1893,10 +2148,30 @@
         });
       });
 
+      document.querySelectorAll(".blankePricingModeSelect").forEach(sel => {
+        sel.addEventListener("click", e => e.stopPropagation());
+        sel.addEventListener("change", e => {
+          const id = e.target.dataset.variantKey;
+          ensurePriceConfig({ id });
+          priceConfigs[id].mode = e.target.value;
+          renderItems();
+        });
+      });
+
       document.querySelectorAll(".priceInput").forEach(inp => {
         inp.addEventListener("click", e => e.stopPropagation());
         inp.addEventListener("input", e => {
           const id = e.target.dataset.id;
+          const type = e.target.dataset.type;
+          ensurePriceConfig({ id });
+          priceConfigs[id][type] = e.target.value;
+        });
+      });
+
+      document.querySelectorAll(".blankePriceInput").forEach(inp => {
+        inp.addEventListener("click", e => e.stopPropagation());
+        inp.addEventListener("input", e => {
+          const id = e.target.dataset.variantKey;
           const type = e.target.dataset.type;
           ensurePriceConfig({ id });
           priceConfigs[id][type] = e.target.value;
@@ -1924,6 +2199,7 @@
       updateSelectedCount();
       updateLoadedQuotePill();
     }
+
 
     function debounce(fn, wait = 250) {
       let t = null;
@@ -1988,6 +2264,19 @@
     function buildSelectedItemsPayload() {
       return Array.from(selectedIds).map(id => {
         const cfg = priceConfigs[id] || { mode: "oow", oow: "", direct: "" };
+        const parsed = parseSelectedKey(id);
+
+        if (parsed.type === "blankeVariant") {
+          return {
+            id: parsed.parentId,
+            pricing_mode: cfg.mode,
+            oow_price: (cfg.mode === "oow" || cfg.mode === "both") ? (cfg.oow || null) : null,
+            direct_price: (cfg.mode === "direct" || cfg.mode === "both") ? (cfg.direct || null) : null,
+            variant_sku: parsed.sku,
+            variant_size: parsed.size
+          };
+        }
+
         return {
           id,
           pricing_mode: cfg.mode,
@@ -2257,10 +2546,15 @@
         })) : [];
 
         (quote.items || []).forEach(item => {
-          const id = String(item.id || "").trim();
-          if (!id) return;
-          selectedIds.add(id);
-          priceConfigs[id] = {
+          const parentId = String(item.id || "").trim();
+          if (!parentId) return;
+
+          const selectedKey = item.variant_sku
+            ? makeBlankeVariantKey(parentId, item.variant_sku || "", item.variant_size || "")
+            : parentId;
+
+          selectedIds.add(selectedKey);
+          priceConfigs[selectedKey] = {
             mode: item.pricing_mode || "oow",
             oow: item.oow_price ?? "",
             direct: item.direct_price ?? ""
