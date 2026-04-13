@@ -1158,7 +1158,7 @@ def group_items_for_pdf(
 
 
 def is_half_width_group(items: List[Dict[str, Any]]) -> bool:
-    return len(items) == 2
+    return len(items) <= 2
 
 
 def estimate_half_width_section_height(card_h: float) -> float:
@@ -1257,7 +1257,7 @@ def build_pdf_grid(
 
         # ----------------------------------------------------
         # Half-width categories: 1 or 2 items
-        # These can pair side-by-side on the same row.
+        # These use half-width headers/cards and can pair side-by-side on the same row.
         # ----------------------------------------------------
         if is_half_width_group(cat_items):
             next_pair = None
