@@ -1111,6 +1111,35 @@ def draw_compact_row(
         price_y -= 9
 
 
+
+def reorder_groups_for_grid(
+    groups: List[Tuple[str, List[Dict[str, Any]]]],
+    categorize_by: str = "category",
+) -> List[Tuple[str, List[Dict[str, Any]]]]:
+    if norm(categorize_by).lower() != "category":
+        return groups
+
+    thinset_group = None
+    other_groups: List[Tuple[str, List[Dict[str, Any]]]] = []
+
+    for label, group_items in groups:
+        if norm(label).upper() == "THINSETS" and thinset_group is None:
+            thinset_group = (label, group_items)
+        else:
+            other_groups.append((label, group_items))
+
+    full_groups = [(label, group_items) for label, group_items in other_groups if len(group_items) > 2]
+    small_groups = [(label, group_items) for label, group_items in other_groups if len(group_items) <= 2]
+
+    reordered: List[Tuple[str, List[Dict[str, Any]]]] = []
+    if thinset_group is not None:
+        reordered.append(thinset_group)
+
+    reordered.extend(full_groups)
+    reordered.extend(small_groups)
+    return reordered
+
+
 def group_items_for_pdf(
     items: List[Dict[str, Any]],
     categorize_by: str = "category",
@@ -1233,7 +1262,7 @@ def build_pdf_grid(
     )
     y = header_divider_y - 10
 
-    groups = group_items_for_pdf(items, categorize_by=categorize_by)
+    groups = reorder_groups_for_grid(group_items_for_pdf(items, categorize_by=categorize_by), categorize_by=categorize_by)
     min_full_section_space = 18 + 8 + card_h + row_gap
     min_half_section_space = estimate_half_width_section_height(card_h)
 
