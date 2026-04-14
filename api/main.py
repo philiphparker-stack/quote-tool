@@ -965,7 +965,7 @@ def draw_card(
         c.drawString(inner_x, title_y - (i * (title_size + 1.2)), line)
 
     title_block_h = max(1, len(title_lines)) * (title_size + 1.2)
-    price_start_y = title_y - title_block_h - 6
+    price_start_y = title_y - title_block_h - 4
 
     price_lines = get_price_lines(it, fallback_mode)
     price_size = 8.4 if len(price_lines) > 1 else 10.4
@@ -979,7 +979,7 @@ def draw_card(
     img_size = 36
     img_x = inner_x
     extra_price_space = max(0, (len(price_lines) - 1) * price_gap)
-    img_y = y_top - card_h + 16 - extra_price_space
+    img_y = y_top - card_h + 10 - extra_price_space
 
     img_path = resolve_item_image_path(norm(it.get("image")))
     img_reader = get_image_reader_from_path(img_path, max_px=180, quality=55) if img_path else None
@@ -1015,7 +1015,7 @@ def draw_card(
     )
 
     line_gap = 0.8
-    mfr_start_y = img_y + 18
+    mfr_start_y = img_y + 14
 
     c.setFillColor(SOFT_TEXT)
     c.setFont("Helvetica", mfr_size)
@@ -1245,7 +1245,7 @@ def build_pdf_grid(
 
     usable_w = W - left - right
     card_w = (usable_w - gutter * (cols - 1)) / cols
-    card_h = 112
+    card_h = 98
 
     half_section_w = (usable_w - section_gap) / 2
     half_section_inner_gutter = max(4, half_section_w - (card_w * 2))
