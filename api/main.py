@@ -979,7 +979,7 @@ def draw_card(
     img_size = 36
     img_x = inner_x
     extra_price_space = max(0, (len(price_lines) - 1) * price_gap)
-    img_y = y_top - card_h + 10 - extra_price_space
+    img_y = y_top - card_h + 16 - extra_price_space
 
     img_path = resolve_item_image_path(norm(it.get("image")))
     img_reader = get_image_reader_from_path(img_path, max_px=180, quality=55) if img_path else None
@@ -1015,7 +1015,7 @@ def draw_card(
     )
 
     line_gap = 0.8
-    mfr_start_y = img_y + 14
+    mfr_start_y = img_y + 18
 
     c.setFillColor(SOFT_TEXT)
     c.setFont("Helvetica", mfr_size)
