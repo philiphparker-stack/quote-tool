@@ -1,17 +1,5 @@
 [
   {
-    "id": "ZTE153030102",
-    "name": "4080 FIRST DEFENSE 1 GAL JUG",
-    "manufacturer": "TEC",
-    "category": "ACCESSORIES",
-    "uom": "ea",
-    "price_direct": 324.0,
-    "price_oow": 583.2,
-    "image": "tec/firstdefense.webp",
-    "aliases": "",
-    "search_terms": "ACCESSORIES TEC ZTE153030102 4080 FIRST DEFENSE 1 GAL JUG"
-  },
-  {
     "id": "ZLC0209-0060-21",
     "name": "LATICRETE 209 FLOOR MUD",
     "manufacturer": "LATICRETE",
@@ -180,42 +168,6 @@
     "search_terms": "ACCESSORIES TEC ZTETA32498C TA-316 MESH 6\"X 50' ROLL"
   },
   {
-    "id": "ZCUEWAT4",
-    "name": "CUSTOM WOOD ENG 4 GAL",
-    "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
-    "category": "ADHESIVE",
-    "uom": "ea",
-    "price_direct": 219.0,
-    "price_oow": 394.20000000000005,
-    "image": "custom/woodendcustom.webp",
-    "aliases": "",
-    "search_terms": "ADHESIVE CUSTOM BUILDING PRODUCTS, INC. ZCUEWAT4 CUSTOM WOOD ENG 4 GAL"
-  },
-  {
-    "id": "ZCUUWAT5",
-    "name": "CUSTOM WOOD UR 5 GAL",
-    "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
-    "category": "ADHESIVE",
-    "uom": "ea",
-    "price_direct": 142.0,
-    "price_oow": 255.60000000000002,
-    "image": "custom/customwoodur.webp",
-    "aliases": "",
-    "search_terms": "ADHESIVE CUSTOM BUILDING PRODUCTS, INC. ZCUUWAT5 CUSTOM WOOD UR 5 GAL"
-  },
-  {
-    "id": "ZCUUAWAT5",
-    "name": "CUSTOM WOOD UR4 5 GAL",
-    "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
-    "category": "ADHESIVE",
-    "uom": "ea",
-    "price_direct": 257.0,
-    "price_oow": 462.6,
-    "image": "custom/woodur4.webp",
-    "aliases": "",
-    "search_terms": "ADHESIVE CUSTOM BUILDING PRODUCTS, INC. ZCUUAWAT5 CUSTOM WOOD UR4 5 GAL"
-  },
-  {
     "id": "ZTE7047365011",
     "name": "749 RELEASABLE PSA 1 GALLON",
     "manufacturer": "TEC",
@@ -286,18 +238,6 @@
     "image": "custom/customvinylpsa.webp",
     "aliases": "",
     "search_terms": "ADHESIVE CUSTOM BUILDING PRODUCTS, INC. ZCUVPSAT4 CUSTOM VINYL PSA 4 GAL"
-  },
-  {
-    "id": "ZCUVPVCTT4",
-    "name": "CUSTOM VINYL VCT 4 GAL",
-    "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
-    "category": "ADHESIVE",
-    "uom": "ea",
-    "price_direct": 64.0,
-    "price_oow": 115.2,
-    "image": "custom/customvinylvct.webp",
-    "aliases": "",
-    "search_terms": "ADHESIVE CUSTOM BUILDING PRODUCTS, INC. ZCUVPVCTT4 CUSTOM VINYL VCT 4 GAL"
   },
   {
     "id": "ZCUPHAAT4",
@@ -406,18 +346,6 @@
     "image": "tec/flexeraht.webp",
     "aliases": "",
     "search_terms": "ADHESIVE TEC ZTE10008612 FLEXERA HT PREMIUM PSA 4GAL"
-  },
-  {
-    "id": "ZTE15036416",
-    "name": "FLEXERA VINYL FLOORING SPRAY 20OZ",
-    "manufacturer": "TEC",
-    "category": "ADHESIVE",
-    "uom": "ea",
-    "price_direct": 299.0,
-    "price_oow": 538.2,
-    "image": "tec/flexeraspray.webp",
-    "aliases": "",
-    "search_terms": "ADHESIVE TEC ZTE15036416 FLEXERA VINYL FLOORING SPRAY 20OZ"
   },
   {
     "id": "ZTE15035581",
@@ -1272,18 +1200,6 @@
     "search_terms": "CURB THE NOBLE COMPANY ZNO281-1 205 CURB OVERLAY 5'"
   },
   {
-    "id": "ZNO282",
-    "name": "282 CURB OVERLAY 8'",
-    "manufacturer": "THE NOBLE COMPANY",
-    "category": "CURB",
-    "uom": "ea",
-    "price_direct": 238.0,
-    "price_oow": 428.4,
-    "image": "noble/curboverlay.webp",
-    "aliases": "",
-    "search_terms": "CURB THE NOBLE COMPANY ZNO282 282 CURB OVERLAY 8'"
-  },
-  {
     "id": "ZNO3001",
     "name": "SOLID CURB 3'",
     "manufacturer": "THE NOBLE COMPANY",
@@ -2023,7 +1939,7 @@
     "uom": "ea",
     "price_direct": 70.0,
     "price_oow": 126.0,
-    "image": "custom/omnigrip.webp",
+    "image": "custom/omnigrip.png",
     "aliases": "",
     "search_terms": "MASTIC CUSTOM BUILDING PRODUCTS, INC. ZCUOGA1-2-1 OMNIGRIP 1 GALLON PREM MASTIC"
   },
@@ -2035,7 +1951,7 @@
     "uom": "ea",
     "price_direct": 287.0,
     "price_oow": 516.6,
-    "image": "custom/omnigrip.webp",
+    "image": "custom/omnigrip.png",
     "aliases": "",
     "search_terms": "MASTIC CUSTOM BUILDING PRODUCTS, INC. ZCUOGA3 OMNIGRIP TILE ADHESIVE 3.5G"
   },
@@ -2640,78 +2556,6 @@
     "search_terms": "PRE-SLOPED SHOWER PANS GURU SHOWER SYSTEMS ZGUIMU9403 HD PRE-SLOPE SHWR TRAY 72\"X72\""
   },
   {
-    "id": "ZNO4620F",
-    "name": "FOAM SHWR PAN 32X60 CTR DRAIN",
-    "manufacturer": "THE NOBLE COMPANY",
-    "category": "PRE-SLOPED SHOWER PANS",
-    "uom": "ea",
-    "price_direct": 91.0,
-    "price_oow": 163.8,
-    "image": "noble/nobleshowerpan.webp",
-    "aliases": "",
-    "search_terms": "PRE-SLOPED SHOWER PANS THE NOBLE COMPANY ZNO4620F FOAM SHWR PAN 32X60 CTR DRAIN"
-  },
-  {
-    "id": "ZNO4610F",
-    "name": "FOAM SHWR PAN 32X60 END DRAIN",
-    "manufacturer": "THE NOBLE COMPANY",
-    "category": "PRE-SLOPED SHOWER PANS",
-    "uom": "ea",
-    "price_direct": 203.0,
-    "price_oow": 365.4,
-    "image": "noble/nobleshowerpan.webp",
-    "aliases": "",
-    "search_terms": "PRE-SLOPED SHOWER PANS THE NOBLE COMPANY ZNO4610F FOAM SHWR PAN 32X60 END DRAIN"
-  },
-  {
-    "id": "ZNO4420F",
-    "name": "FOAM SHWR PAN 38X38 CTR DRAIN",
-    "manufacturer": "THE NOBLE COMPANY",
-    "category": "PRE-SLOPED SHOWER PANS",
-    "uom": "ea",
-    "price_direct": 108.0,
-    "price_oow": 194.4,
-    "image": "noble/nobleshowerpan.webp",
-    "aliases": "",
-    "search_terms": "PRE-SLOPED SHOWER PANS THE NOBLE COMPANY ZNO4420F FOAM SHWR PAN 38X38 CTR DRAIN"
-  },
-  {
-    "id": "ZNO4720F",
-    "name": "FOAM SHWR PAN 48X48 CTR DRAIN",
-    "manufacturer": "THE NOBLE COMPANY",
-    "category": "PRE-SLOPED SHOWER PANS",
-    "uom": "ea",
-    "price_direct": 93.0,
-    "price_oow": 167.4,
-    "image": "noble/nobleshowerpan.webp",
-    "aliases": "",
-    "search_terms": "PRE-SLOPED SHOWER PANS THE NOBLE COMPANY ZNO4720F FOAM SHWR PAN 48X48 CTR DRAIN"
-  },
-  {
-    "id": "ZNO4520F",
-    "name": "FOAM SHWR PAN 48X72 CTR DRAIN",
-    "manufacturer": "THE NOBLE COMPANY",
-    "category": "PRE-SLOPED SHOWER PANS",
-    "uom": "ea",
-    "price_direct": 291.0,
-    "price_oow": 523.8,
-    "image": "noble/nobleshowerpan.webp",
-    "aliases": "",
-    "search_terms": "PRE-SLOPED SHOWER PANS THE NOBLE COMPANY ZNO4520F FOAM SHWR PAN 48X72 CTR DRAIN"
-  },
-  {
-    "id": "ZNO4820F",
-    "name": "FOAM SHWR PAN 72X72 CTR DRAIN",
-    "manufacturer": "THE NOBLE COMPANY",
-    "category": "PRE-SLOPED SHOWER PANS",
-    "uom": "ea",
-    "price_direct": 73.0,
-    "price_oow": 131.4,
-    "image": "noble/nobleshowerpan.webp",
-    "aliases": "",
-    "search_terms": "PRE-SLOPED SHOWER PANS THE NOBLE COMPANY ZNO4820F FOAM SHWR PAN 72X72 CTR DRAIN"
-  },
-  {
     "id": "ZNO4610B",
     "name": "HONEYCOMB SHW PAN 32X60 OS DRN",
     "manufacturer": "THE NOBLE COMPANY",
@@ -2791,7 +2635,7 @@
     "uom": "ea",
     "price_direct": 210.0,
     "price_oow": 378.0,
-    "image": "comingsoon.webp",
+    "image": "custom/mbp.png",
     "aliases": "",
     "search_terms": "PRIMER CUSTOM BUILDING PRODUCTS, INC. ZCUCPMBP3 MS BONDING PRIMER 3.5 GAL"
   },
@@ -2803,7 +2647,7 @@
     "uom": "ea",
     "price_direct": 103.0,
     "price_oow": 185.4,
-    "image": "comingsoon.webp",
+    "image": "custom/mbp.png",
     "aliases": "",
     "search_terms": "PRIMER CUSTOM BUILDING PRODUCTS, INC. ZCUCPMBP1 MULTI SURFCE BONDING PRIMER 1G"
   },
@@ -2818,18 +2662,6 @@
     "image": "comingsoon.webp",
     "aliases": "",
     "search_terms": "PRIMER CUSTOM BUILDING PRODUCTS, INC. ZCUPSAP1 PRIMER PEEL & STICK 1GAL"
-  },
-  {
-    "id": "ZPWAFMPRICON",
-    "name": "PRIMER CONCENTRATE 1 GAL",
-    "manufacturer": "PROTECTO WRAP COMPANY",
-    "category": "PRIMER",
-    "uom": "ea",
-    "price_direct": 32.0,
-    "price_oow": 57.6,
-    "image": "comingsoon.webp",
-    "aliases": "",
-    "search_terms": "PRIMER PROTECTO WRAP COMPANY ZPWAFMPRICON PRIMER CONCENTRATE 1 GAL"
   },
   {
     "id": "ZLC0095-0401-2",
@@ -2878,18 +2710,6 @@
     "image": "tec/560mpp.webp",
     "aliases": "",
     "search_terms": "PRIMER TEC ZTETA5605 TA-560 MULTIPURPOSE PRIMER 5G"
-  },
-  {
-    "id": "ZLC0913-0003-2",
-    "name": "VAPOR BAN PRIMER ER KIT",
-    "manufacturer": "LATICRETE",
-    "category": "PRIMER",
-    "uom": "ea",
-    "price_direct": 232.0,
-    "price_oow": 417.6,
-    "image": "laticrete/vaporbaner.webp",
-    "aliases": "",
-    "search_terms": "PRIMER LATICRETE ZLC0913-0003-2 VAPOR BAN PRIMER ER KIT"
   },
   {
     "id": "ZUG290019004",
@@ -2952,18 +2772,6 @@
     "search_terms": "SEALANT / CLEANER / RELEASE LATICRETE ZLC9099-0601-2 HYDRO BAN ADH & SEALANT 10.5OZ"
   },
   {
-    "id": "ZLCST552-0624-10",
-    "name": "ST VINYL & LAMINATE CLNR 24OZ",
-    "manufacturer": "LATICRETE",
-    "category": "SEALANT / CLEANER / RELEASE",
-    "uom": "ea",
-    "price_direct": 52.0,
-    "price_oow": 93.6,
-    "image": "comingsoon.webp",
-    "aliases": "",
-    "search_terms": "SEALANT / CLEANER / RELEASE LATICRETE ZLCST552-0624-10 ST VINYL & LAMINATE CLNR 24OZ"
-  },
-  {
     "id": "ZNO3200",
     "name": "NOBLESEALANT 250 10.3 OZ TUBE",
     "manufacturer": "THE NOBLE COMPANY",
@@ -2998,18 +2806,6 @@
     "image": "comingsoon.webp",
     "aliases": "",
     "search_terms": "SEALANT / CLEANER / RELEASE THE NOBLE COMPANY ZNONOBLESEAL150 NOBLE SEALANT 150 10.3 OZ."
-  },
-  {
-    "id": "ZNO3201",
-    "name": "NOBLESEALANT 250 5 OZ TUBE",
-    "manufacturer": "THE NOBLE COMPANY",
-    "category": "SEALANT / CLEANER / RELEASE",
-    "uom": "ea",
-    "price_direct": 42.0,
-    "price_oow": 75.6,
-    "image": "comingsoon.webp",
-    "aliases": "",
-    "search_terms": "SEALANT / CLEANER / RELEASE THE NOBLE COMPANY ZNO3201 NOBLESEALANT 250 5 OZ TUBE"
   },
   {
     "id": "ZUG178665",
@@ -3055,7 +2851,7 @@
     "uom": "ea",
     "price_direct": 116.0,
     "price_oow": 208.8,
-    "image": "comingsoon.webp",
+    "image": "custom/levelquikprimer.webp",
     "aliases": "",
     "search_terms": "SELF LEVELING CUSTOM BUILDING PRODUCTS, INC. ZCUCP1 LEVEL QUIK LATEX PRIMER 1GL"
   },
@@ -3067,21 +2863,9 @@
     "uom": "ea",
     "price_direct": 81.0,
     "price_oow": 145.8,
-    "image": "comingsoon.webp",
+    "image": "custom/levelquikrs.webp",
     "aliases": "",
     "search_terms": "SELF LEVELING CUSTOM BUILDING PRODUCTS, INC. ZCULQ50 LEVEL QUIK RAPID SETTING 50LB"
-  },
-  {
-    "id": "ZCULLSLU30",
-    "name": "LEVELLITE 30LB",
-    "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
-    "category": "SELF LEVELING",
-    "uom": "ea",
-    "price_direct": 319.0,
-    "price_oow": 574.2,
-    "image": "comingsoon.webp",
-    "aliases": "",
-    "search_terms": "SELF LEVELING CUSTOM BUILDING PRODUCTS, INC. ZCULLSLU30 LEVELLITE 30LB"
   },
   {
     "id": "ZCULQCSP25",
@@ -3103,7 +2887,7 @@
     "uom": "ea",
     "price_direct": 138.0,
     "price_oow": 248.4,
-    "image": "comingsoon.webp",
+    "image": "custom/tl100.webp",
     "aliases": "",
     "search_terms": "SELF LEVELING CUSTOM BUILDING PRODUCTS, INC. ZCUTL10050T TECHLEVEL 100 SLU 50LB"
   },
@@ -3115,7 +2899,7 @@
     "uom": "ea",
     "price_direct": 245.0,
     "price_oow": 441.0,
-    "image": "comingsoon.webp",
+    "image": "custom/tl125.webp",
     "aliases": "",
     "search_terms": "SELF LEVELING CUSTOM BUILDING PRODUCTS, INC. ZCUTL12550T TECHLEVEL 125 DEEP POUR SLU 50"
   },
@@ -3127,21 +2911,9 @@
     "uom": "ea",
     "price_direct": 268.0,
     "price_oow": 482.4,
-    "image": "comingsoon.webp",
+    "image": "custom/tl150.webp",
     "aliases": "",
     "search_terms": "SELF LEVELING CUSTOM BUILDING PRODUCTS, INC. ZCUTL15050T TECHLEVEL 150 SLU 50LB"
-  },
-  {
-    "id": "ZCUTLHPT50T",
-    "name": "TECHLEVEL HPT SLU TOPPING 50LB",
-    "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
-    "category": "SELF LEVELING",
-    "uom": "ea",
-    "price_direct": 57.0,
-    "price_oow": 102.6,
-    "image": "comingsoon.webp",
-    "aliases": "",
-    "search_terms": "SELF LEVELING CUSTOM BUILDING PRODUCTS, INC. ZCUTLHPT50T TECHLEVEL HPT SLU TOPPING 50LB"
   },
   {
     "id": "ZCUTPMP25T",
@@ -3180,18 +2952,6 @@
     "search_terms": "SELF LEVELING CUSTOM BUILDING PRODUCTS, INC. ZCUTPSC10T CUSTOMTECH TECHPATCH SC 10LB"
   },
   {
-    "id": "ZTE15035125",
-    "name": "EZ LEVEL 323 SLU 50LB",
-    "manufacturer": "TEC",
-    "category": "SELF LEVELING",
-    "uom": "ea",
-    "price_direct": 113.0,
-    "price_oow": 203.4,
-    "image": "tec/323ezlevel.webp",
-    "aliases": "",
-    "search_terms": "SELF LEVELING TEC ZTE15035125 EZ LEVEL 323 SLU 50LB"
-  },
-  {
     "id": "ZLC2900-0030-21",
     "name": "MVIS LITE WALL FLOAT 30LB",
     "manufacturer": "LATICRETE",
@@ -3202,18 +2962,6 @@
     "image": "comingsoon.webp",
     "aliases": "",
     "search_terms": "SELF LEVELING LATICRETE ZLC2900-0030-21 MVIS LITE WALL FLOAT 30LB"
-  },
-  {
-    "id": "ZLC0906-0045-2",
-    "name": "NXT VAPOR REDUCTION COAT 45GAL",
-    "manufacturer": "LATICRETE",
-    "category": "SELF LEVELING",
-    "uom": "ea",
-    "price_direct": 174.0,
-    "price_oow": 313.20000000000005,
-    "image": "comingsoon.webp",
-    "aliases": "",
-    "search_terms": "SELF LEVELING LATICRETE ZLC0906-0045-2 NXT VAPOR REDUCTION COAT 45GAL"
   },
   {
     "id": "ZCULQESL50",
@@ -3358,18 +3106,6 @@
     "image": "laticrete/nxtpatch.webp",
     "aliases": "",
     "search_terms": "SELF LEVELING LATICRETE ZLC0904-0025-21 NXT PATCH GREY 25LB"
-  },
-  {
-    "id": "ZLC0905-0401-2",
-    "name": "NXT PRIMER 1 GALLON",
-    "manufacturer": "LATICRETE",
-    "category": "SELF LEVELING",
-    "uom": "ea",
-    "price_direct": 221.0,
-    "price_oow": 397.8,
-    "image": "laticrete/nxtprimer.webp",
-    "aliases": "",
-    "search_terms": "SELF LEVELING LATICRETE ZLC0905-0401-2 NXT PRIMER 1 GALLON"
   },
   {
     "id": "ZTE15035253",
@@ -4668,18 +4404,6 @@
     "search_terms": "THINSET LATICRETE ZLC0253-0050-22-1 253R GOLD RAPID WHITE 50LB"
   },
   {
-    "id": "ZLC0254-0050-22-DL",
-    "name": "254 PLATINUM DUSTLOCK WHITE",
-    "manufacturer": "LATICRETE",
-    "category": "THINSET",
-    "uom": "ea",
-    "price_direct": 62.0,
-    "price_oow": 111.6,
-    "image": "laticrete/254platinum.webp",
-    "aliases": "",
-    "search_terms": "THINSET LATICRETE ZLC0254-0050-22-DL 254 PLATINUM DUSTLOCK WHITE"
-  },
-  {
     "id": "ZLC0254-0050-21",
     "name": "254 PLATINUM GREY 50LB",
     "manufacturer": "LATICRETE",
@@ -4872,30 +4596,6 @@
     "search_terms": "THINSET TEC ZTE3N1W30 3N1 MORTAR WHITE 30LB"
   },
   {
-    "id": "ZLC0259-0050-21-DL",
-    "name": "4-XLT DUSTLOCK GREY",
-    "manufacturer": "LATICRETE",
-    "category": "THINSET",
-    "uom": "ea",
-    "price_direct": 212.0,
-    "price_oow": 381.6,
-    "image": "laticrete/4xlt.webp",
-    "aliases": "",
-    "search_terms": "THINSET LATICRETE ZLC0259-0050-21-DL 4-XLT DUSTLOCK GREY"
-  },
-  {
-    "id": "ZLC0259-0050-22-DL",
-    "name": "4-XLT DUSTLOCK WHITE",
-    "manufacturer": "LATICRETE",
-    "category": "THINSET",
-    "uom": "ea",
-    "price_direct": 133.0,
-    "price_oow": 239.4,
-    "image": "laticrete/4xlt.webp",
-    "aliases": "",
-    "search_terms": "THINSET LATICRETE ZLC0259-0050-22-DL 4-XLT DUSTLOCK WHITE"
-  },
-  {
     "id": "ZLC0259-0050-21",
     "name": "4-XLT GREY 50LB",
     "manufacturer": "LATICRETE",
@@ -4942,18 +4642,6 @@
     "image": "laticrete/4xlt.webp",
     "aliases": "",
     "search_terms": "THINSET LATICRETE ZLC0259-0050-22 4-XLT WHITE 50LB"
-  },
-  {
-    "id": "ZCUAMA2",
-    "name": "ACRYLIC MORTAR ADMIX 2 1/2GL",
-    "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
-    "category": "THINSET",
-    "uom": "ea",
-    "price_direct": 289.0,
-    "price_oow": 520.2,
-    "image": "custom/customadmix.webp",
-    "aliases": "",
-    "search_terms": "THINSET CUSTOM BUILDING PRODUCTS, INC. ZCUAMA2 ACRYLIC MORTAR ADMIX 2 1/2GL"
   },
   {
     "id": "ZCUSDS25",
@@ -5050,18 +4738,6 @@
     "image": "laticrete/3701.webp",
     "aliases": "",
     "search_terms": "THINSET LATICRETE ZLC1060-0030-21 3701 LIGHT WEIGHT MORTAR 30LB"
-  },
-  {
-    "id": "ZLC0295-0050-22",
-    "name": "CST CRACK SUPP MORTAR WH 50LB",
-    "manufacturer": "LATICRETE",
-    "category": "THINSET",
-    "uom": "ea",
-    "price_direct": 266.0,
-    "price_oow": 478.8,
-    "image": "comingsoon.webp",
-    "aliases": "",
-    "search_terms": "THINSET LATICRETE ZLC0295-0050-22 CST CRACK SUPP MORTAR WH 50LB"
   },
   {
     "id": "ZLCS-228P4-NS-03-1",
@@ -5196,90 +4872,6 @@
     "search_terms": "THINSET TEC ZTETA359 ISO-LIGHT WHITE MORTAR"
   },
   {
-    "id": "ZLC0257-0025-21",
-    "name": "LATICRETE 257 TITANIUM (GREY)",
-    "manufacturer": "LATICRETE",
-    "category": "THINSET",
-    "uom": "ea",
-    "price_direct": 148.0,
-    "price_oow": 266.4,
-    "image": "laticrete/257titanium.webp",
-    "aliases": "",
-    "search_terms": "THINSET LATICRETE ZLC0257-0025-21 LATICRETE 257 TITANIUM (GREY)"
-  },
-  {
-    "id": "ZLC0257-0025-22",
-    "name": "LATICRETE 257 TITANIUM (WHITE)",
-    "manufacturer": "LATICRETE",
-    "category": "THINSET",
-    "uom": "ea",
-    "price_direct": 153.0,
-    "price_oow": 275.4,
-    "image": "laticrete/257titanium.webp",
-    "aliases": "",
-    "search_terms": "THINSET LATICRETE ZLC0257-0025-22 LATICRETE 257 TITANIUM (WHITE)"
-  },
-  {
-    "id": "ZLC2700-0025-21",
-    "name": "SELECTBOND ADHESIVE GREY 25LB",
-    "manufacturer": "LATICRETE",
-    "category": "THINSET",
-    "uom": "ea",
-    "price_direct": 302.0,
-    "price_oow": 543.6,
-    "image": "comingsoon.webp",
-    "aliases": "",
-    "search_terms": "THINSET LATICRETE ZLC2700-0025-21 SELECTBOND ADHESIVE GREY 25LB"
-  },
-  {
-    "id": "ZLC2700-0025-22",
-    "name": "SELECTBOND ADHESIVE WHITE 25LB",
-    "manufacturer": "LATICRETE",
-    "category": "THINSET",
-    "uom": "ea",
-    "price_direct": 311.0,
-    "price_oow": 559.8,
-    "image": "comingsoon.webp",
-    "aliases": "",
-    "search_terms": "THINSET LATICRETE ZLC2700-0025-22 SELECTBOND ADHESIVE WHITE 25LB"
-  },
-  {
-    "id": "ZLC27HP-1001-2",
-    "name": "SELECTBOND HI PERFORMANCE KIT",
-    "manufacturer": "LATICRETE",
-    "category": "THINSET",
-    "uom": "ea",
-    "price_direct": 72.0,
-    "price_oow": 129.6,
-    "image": "comingsoon.webp",
-    "aliases": "",
-    "search_terms": "THINSET LATICRETE ZLC27HP-1001-2 SELECTBOND HI PERFORMANCE KIT"
-  },
-  {
-    "id": "ZLC27NS-1001-2",
-    "name": "SELECTBOND NON-SAG KIT",
-    "manufacturer": "LATICRETE",
-    "category": "THINSET",
-    "uom": "ea",
-    "price_direct": 142.0,
-    "price_oow": 255.60000000000002,
-    "image": "comingsoon.webp",
-    "aliases": "",
-    "search_terms": "THINSET LATICRETE ZLC27NS-1001-2 SELECTBOND NON-SAG KIT"
-  },
-  {
-    "id": "ZLC270R-1001-2",
-    "name": "SELECTBOND RAPID KIT",
-    "manufacturer": "LATICRETE",
-    "category": "THINSET",
-    "uom": "ea",
-    "price_direct": 53.0,
-    "price_oow": 95.4,
-    "image": "comingsoon.webp",
-    "aliases": "",
-    "search_terms": "THINSET LATICRETE ZLC270R-1001-2 SELECTBOND RAPID KIT"
-  },
-  {
     "id": "ZLC0231-0050-21",
     "name": "LHT PLUS GREY",
     "manufacturer": "LATICRETE",
@@ -5362,18 +4954,6 @@
     "image": "laticrete/multimaxlite.webp",
     "aliases": "",
     "search_terms": "THINSET LATICRETE ZLC0289-0025-22 MULTIMAX LITE WHITE MORTR 25LB"
-  },
-  {
-    "id": "ZCUMGMM50",
-    "name": "NAT STONE & TILE MORTAR WHITE",
-    "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
-    "category": "THINSET",
-    "uom": "ea",
-    "price_direct": 144.0,
-    "price_oow": 259.2,
-    "image": "custom/naturalstonemortar.webp",
-    "aliases": "",
-    "search_terms": "THINSET CUSTOM BUILDING PRODUCTS, INC. ZCUMGMM50 NAT STONE & TILE MORTAR WHITE"
   },
   {
     "id": "ZTEPMF300G",
@@ -6216,18 +5796,6 @@
     "search_terms": "WATERPROOFING & ANTIFRACTURE CUSTOM BUILDING PRODUCTS, INC. ZCU77289-9 9240 WATRPROF/AF MEMBRANE ONLY"
   },
   {
-    "id": "ZCUTNSM6",
-    "name": "ANTI FRACTURE MEMBRANE MESH",
-    "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
-    "category": "WATERPROOFING & ANTIFRACTURE",
-    "uom": "ea",
-    "price_direct": 277.0,
-    "price_oow": 498.6,
-    "image": "custom/membranemesh.webp",
-    "aliases": "",
-    "search_terms": "WATERPROOFING & ANTIFRACTURE CUSTOM BUILDING PRODUCTS, INC. ZCUTNSM6 ANTI FRACTURE MEMBRANE MESH"
-  },
-  {
     "id": "ZTE316HYDRAFLEX3.5",
     "name": "3.5G HYDRAFLEX",
     "manufacturer": "TEC",
@@ -6238,30 +5806,6 @@
     "image": "tec/hydraflex.webp",
     "aliases": "",
     "search_terms": "WATERPROOFING & ANTIFRACTURE TEC ZTE316HYDRAFLEX3.5 3.5G HYDRAFLEX"
-  },
-  {
-    "id": "ZCUSGL3P",
-    "name": "EASY MAT SOUND GUARD 3MM 400SF",
-    "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
-    "category": "WATERPROOFING & ANTIFRACTURE",
-    "uom": "ea",
-    "price_direct": 313.0,
-    "price_oow": 563.4,
-    "image": "custom/easymat.webp",
-    "aliases": "",
-    "search_terms": "WATERPROOFING & ANTIFRACTURE CUSTOM BUILDING PRODUCTS, INC. ZCUSGL3P EASY MAT SOUND GUARD 3MM 400SF"
-  },
-  {
-    "id": "ZCUSGL5P",
-    "name": "EASYMAT PEEL STICK 5MM 300SF",
-    "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
-    "category": "WATERPROOFING & ANTIFRACTURE",
-    "uom": "ea",
-    "price_direct": 291.0,
-    "price_oow": 523.8,
-    "image": "custom/easymat.webp",
-    "aliases": "",
-    "search_terms": "WATERPROOFING & ANTIFRACTURE CUSTOM BUILDING PRODUCTS, INC. ZCUSGL5P EASYMAT PEEL STICK 5MM 300SF"
   },
   {
     "id": "ZCUSG15",
@@ -6504,18 +6048,6 @@
     "search_terms": "WATERPROOFING & ANTIFRACTURE LATICRETE ZLC0178-0090-2 FRACTURE BAN 90 90MIL 2.3MM"
   },
   {
-    "id": "ZLC0178-0401-2",
-    "name": "FRACTURE BAN PRIMER 1GAL",
-    "manufacturer": "LATICRETE",
-    "category": "WATERPROOFING & ANTIFRACTURE",
-    "uom": "ea",
-    "price_direct": 44.0,
-    "price_oow": 79.2,
-    "image": "comingsoon.webp",
-    "aliases": "",
-    "search_terms": "WATERPROOFING & ANTIFRACTURE LATICRETE ZLC0178-0401-2 FRACTURE BAN PRIMER 1GAL"
-  },
-  {
     "id": "ZLC9265-0035-2",
     "name": "HYDRO BARRIER PLUS 3.5 GALLON",
     "manufacturer": "LATICRETE",
@@ -6672,18 +6204,6 @@
     "search_terms": "WATERPROOFING & ANTIFRACTURE PROTECTO WRAP COMPANY ZPW9PDLM05 PROTECTO DECK LIQUID 5 GALLON"
   },
   {
-    "id": "ZCURGSC1-2",
-    "name": "REDGARD SPEEDCOAT 1-GAL",
-    "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
-    "category": "WATERPROOFING & ANTIFRACTURE",
-    "uom": "ea",
-    "price_direct": 228.0,
-    "price_oow": 410.4,
-    "image": "custom/redgard.webp",
-    "aliases": "",
-    "search_terms": "WATERPROOFING & ANTIFRACTURE CUSTOM BUILDING PRODUCTS, INC. ZCURGSC1-2 REDGARD SPEEDCOAT 1-GAL"
-  },
-  {
     "id": "ZCURGM2323SF",
     "name": "REDGARD UNCOUP MAT 323 SF ROLL",
     "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
@@ -6802,18 +6322,6 @@
     "image": "tec/waterdefensepro.webp",
     "aliases": "",
     "search_terms": "WATERPROOFING & ANTIFRACTURE TEC ZTE7221251227 WATER DEFENSE PRO 3.5 GALLON"
-  },
-  {
-    "id": "ZCUTNSM2",
-    "name": "WATERPROOF REINFORCING TAPE",
-    "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
-    "category": "WATERPROOFING & ANTIFRACTURE",
-    "uom": "ea",
-    "price_direct": 272.0,
-    "price_oow": 489.6,
-    "image": "custom/techwsf.webp",
-    "aliases": "",
-    "search_terms": "WATERPROOFING & ANTIFRACTURE CUSTOM BUILDING PRODUCTS, INC. ZCUTNSM2 WATERPROOF REINFORCING TAPE"
   },
   {
     "id": "ZGUIGU6100",
@@ -7522,5 +7030,29 @@
     "image": "blanke/permat.png",
     "aliases": "",
     "search_terms": "BLANKE ZBL527-904-US-1 Blanke Permat 2' x 3.2' (6.5sqft sheet) Uncoupling Mat   "
+  },
+  {
+    "id": "ZCUWPRF6",
+    "name": "6\" WATERPROOF/ANTI-FRAC FABRIC",
+    "manufacturer": "CUSTOM BUILDING PRODUCTS, INC.",
+    "category": "WATERPROOFING",
+    "uom": "ea",
+    "price_direct": 0,
+    "price_oow": 0,
+    "image": "custom/membranemesh.webp",
+    "aliases": "",
+    "search_terms": "WATERPROOFING CUSTOM ZCUWPRF6"
+  },
+  {
+    "id": "ZLC0921-0401-2",
+    "name": "LATICRETE PRIMER PLUS 1 GALLON",
+    "manufacturer": "LATICRETE",
+    "category": "PRIMER",
+    "uom": "ea",
+    "price_direct": 0,
+    "price_oow": 0,
+    "image": "laticrete/primerplus.webp",
+    "aliases": "",
+    "search_terms": "PRIMER LATICRETE ZLC0921-0401-2"
   }
 ]
