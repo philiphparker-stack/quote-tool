@@ -337,6 +337,35 @@ def try_float(value: Any) -> Optional[float]:
         return None
 
 
+def normalize_pricing_mode(value: Any) -> str:
+    mode = norm(value).lower()
+    return mode if mode in {"oow", "direct", "both"} else "oow"
+
+
+def validate_selected_item_pricing(items: Optional[List[SelectedItemReq]]) -> None:
+    missing: List[str] = []
+
+    for selected in (items or []):
+        pricing_mode = normalize_pricing_mode(selected.pricing_mode)
+        item_label = norm(selected.variant_sku) or norm(selected.id) or "Selected item"
+
+        if pricing_mode in {"oow", "both"} and try_float(selected.oow_price) is None:
+            missing.append(f"{item_label}: Warehouse price is required")
+            continue
+
+        if pricing_mode in {"direct", "both"} and try_float(selected.direct_price) is None:
+            missing.append(f"{item_label}: Direct price is required")
+
+    if missing:
+        preview = "; ".join(missing[:8])
+        if len(missing) > 8:
+            preview += f"; and {len(missing) - 8} more"
+        raise HTTPException(
+            status_code=400,
+            detail=f"Every selected catalog item must have a typed price. {preview}.",
+        )
+
+
 def get_numeric_price(it: Dict[str, Any], mode: str) -> Optional[float]:
     raw = it.get("price_direct") if mode == "direct" else it.get("price_oow")
     if raw is None or raw == "":
@@ -356,15 +385,10 @@ def fmt_single_price(label: str, value: Optional[float], uom: str) -> str:
 def get_price_lines(it: Dict[str, Any], legacy_mode: str) -> List[str]:
     uom = norm(it.get("uom") or "ea")
 
-    pricing_mode = norm(it.get("_pricing_mode")).lower()
-    if pricing_mode in {"oow", "direct", "both"}:
+    pricing_mode = normalize_pricing_mode(it.get("_pricing_mode"))
+    if norm(it.get("_pricing_mode")):
         oow_price = try_float(it.get("_override_oow_price"))
-        if oow_price is None:
-            oow_price = try_float(it.get("price_oow"))
-
         direct_price = try_float(it.get("_override_direct_price"))
-        if direct_price is None:
-            direct_price = try_float(it.get("price_direct"))
 
         lines: List[str] = []
         if pricing_mode in {"oow", "both"}:
@@ -492,9 +516,7 @@ def build_display_items_for_saved_quote(
 def serialize_selected_items(items: Optional[List[SelectedItemReq]]) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
     for selected in (items or []):
-        pricing_mode = norm(selected.pricing_mode).lower()
-        if pricing_mode not in {"oow", "direct", "both"}:
-            pricing_mode = "oow"
+        pricing_mode = normalize_pricing_mode(selected.pricing_mode)
 
         out.append({
             "id": norm(selected.id),
@@ -965,7 +987,7 @@ def draw_card(
         c.drawString(inner_x, title_y - (i * (title_size + 1.2)), line)
 
     title_block_h = max(1, len(title_lines)) * (title_size + 1.2)
-    price_start_y = title_y - title_block_h - 4
+    price_start_y = title_y - title_block_h - 6
 
     price_lines = get_price_lines(it, fallback_mode)
     price_size = 8.4 if len(price_lines) > 1 else 10.4
@@ -1111,35 +1133,6 @@ def draw_compact_row(
         price_y -= 9
 
 
-
-def reorder_groups_for_grid(
-    groups: List[Tuple[str, List[Dict[str, Any]]]],
-    categorize_by: str = "category",
-) -> List[Tuple[str, List[Dict[str, Any]]]]:
-    if norm(categorize_by).lower() != "category":
-        return groups
-
-    thinset_group = None
-    other_groups: List[Tuple[str, List[Dict[str, Any]]]] = []
-
-    for label, group_items in groups:
-        if norm(label).upper() == "THINSETS" and thinset_group is None:
-            thinset_group = (label, group_items)
-        else:
-            other_groups.append((label, group_items))
-
-    full_groups = [(label, group_items) for label, group_items in other_groups if len(group_items) > 2]
-    small_groups = [(label, group_items) for label, group_items in other_groups if len(group_items) <= 2]
-
-    reordered: List[Tuple[str, List[Dict[str, Any]]]] = []
-    if thinset_group is not None:
-        reordered.append(thinset_group)
-
-    reordered.extend(full_groups)
-    reordered.extend(small_groups)
-    return reordered
-
-
 def group_items_for_pdf(
     items: List[Dict[str, Any]],
     categorize_by: str = "category",
@@ -1245,7 +1238,7 @@ def build_pdf_grid(
 
     usable_w = W - left - right
     card_w = (usable_w - gutter * (cols - 1)) / cols
-    card_h = 98
+    card_h = 112
 
     half_section_w = (usable_w - section_gap) / 2
     half_section_inner_gutter = max(4, half_section_w - (card_w * 2))
@@ -1262,7 +1255,7 @@ def build_pdf_grid(
     )
     y = header_divider_y - 10
 
-    groups = reorder_groups_for_grid(group_items_for_pdf(items, categorize_by=categorize_by), categorize_by=categorize_by)
+    groups = group_items_for_pdf(items, categorize_by=categorize_by)
     min_full_section_space = 18 + 8 + card_h + row_gap
     min_half_section_space = estimate_half_width_section_height(card_h)
 
@@ -1286,7 +1279,7 @@ def build_pdf_grid(
 
         # ----------------------------------------------------
         # Half-width categories: 1 or 2 items
-        # These use half-width headers/cards and can pair side-by-side on the same row.
+        # These can pair side-by-side on the same row.
         # ----------------------------------------------------
         if is_half_width_group(cat_items):
             next_pair = None
@@ -1647,6 +1640,8 @@ def save_quote(request: Request, req: SaveQuoteReq):
     if not (req.items or req.custom_items):
         raise HTTPException(status_code=400, detail="Select at least one item or add a custom item before saving.")
 
+    validate_selected_item_pricing(req.items)
+
     quote_id = safe_quote_id(req.quote_id or "") or uuid.uuid4().hex
     path = saved_quote_path(quote_id)
 
@@ -1699,6 +1694,8 @@ def save_quote(request: Request, req: SaveQuoteReq):
 def generate(request: Request, req: GenerateReq):
     require_password(request)
 
+    validate_selected_item_pricing(req.items)
+
     items_map = load_items_map()
     picked: List[Dict[str, Any]] = []
 
@@ -1709,9 +1706,7 @@ def generate(request: Request, req: GenerateReq):
                 continue
 
             base = dict(items_map[item_id])
-            pricing_mode = norm(selected.pricing_mode).lower()
-            if pricing_mode not in {"oow", "direct", "both"}:
-                pricing_mode = "oow"
+            pricing_mode = normalize_pricing_mode(selected.pricing_mode)
 
             variant_sku = norm(selected.variant_sku)
             variant_size = norm(selected.variant_size)

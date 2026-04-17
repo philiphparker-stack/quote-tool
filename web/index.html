@@ -2286,9 +2286,71 @@
       });
     }
 
+    function parsePriceValue(raw) {
+      const value = String(raw ?? "").trim().replace(/[$,]/g, "");
+      if (!value) return null;
+      const num = Number(value);
+      return Number.isFinite(num) ? num : null;
+    }
+
+    function selectedItemDisplayLabel(id) {
+      const parsed = parseSelectedKey(id);
+
+      if (parsed.type === "blankeVariant") {
+        const parent = [...currentItems, ...selectedOnlyItemsCache].find(item => item.id === parsed.parentId);
+        const parentName = parent?.name || parsed.parentId || "Blanke Item";
+        const variantLabel = parsed.size || parsed.sku || "Variant";
+        return `${parentName} - ${variantLabel}`;
+      }
+
+      const item = [...currentItems, ...selectedOnlyItemsCache].find(entry => entry.id === id);
+      return item?.name || id;
+    }
+
+    function getMissingPriceMessages() {
+      const messages = [];
+
+      for (const id of Array.from(selectedIds)) {
+        const cfg = priceConfigs[id] || { mode: "oow", oow: "", direct: "" };
+        const label = selectedItemDisplayLabel(id);
+        const needsOow = cfg.mode === "oow" || cfg.mode === "both";
+        const needsDirect = cfg.mode === "direct" || cfg.mode === "both";
+
+        if (needsOow && parsePriceValue(cfg.oow) === null) {
+          messages.push(`${label}: enter a Warehouse price.`);
+          continue;
+        }
+
+        if (needsDirect && parsePriceValue(cfg.direct) === null) {
+          messages.push(`${label}: enter a Direct price.`);
+        }
+      }
+
+      return messages;
+    }
+
+    function validateSelectedPricingBeforeSubmit() {
+      const missingMessages = getMissingPriceMessages();
+      if (!missingMessages.length) return true;
+
+      const preview = missingMessages.slice(0, 8).join("\n");
+      const extraCount = missingMessages.length - Math.min(missingMessages.length, 8);
+      const suffix = extraCount > 0 ? `\n(and ${extraCount} more)` : "";
+
+      alert(
+        `Every selected catalog item must have a typed price before you continue.\n\n${preview}${suffix}`
+      );
+      return false;
+    }
+
+
     async function generatePdf() {
       if (!selectedIds.size && !customItems.length) {
         alert("Select at least one item or add a custom item first.");
+        return;
+      }
+
+      if (!validateSelectedPricingBeforeSubmit()) {
         return;
       }
 
@@ -2456,6 +2518,10 @@
 
       if (!selectedIds.size && !customItems.length) {
         alert("Select at least one item or add a custom item before saving.");
+        return;
+      }
+
+      if (!validateSelectedPricingBeforeSubmit()) {
         return;
       }
 
@@ -2662,6 +2728,9 @@
     generateBtn.addEventListener("click", () => {
       if (!selectedIds.size && !customItems.length) {
         alert("Select at least one item or add a custom item first.");
+        return;
+      }
+      if (!validateSelectedPricingBeforeSubmit()) {
         return;
       }
       openLayoutModal();
