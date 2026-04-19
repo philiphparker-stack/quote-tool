@@ -36,9 +36,28 @@ EMSER_LOGO_CANDIDATES = [
 ]
 
 COMING_SOON_IMAGE = os.path.join(IMAGES_DIR, "comingsoon.png")
-
-SAVED_QUOTES_DIR = os.path.join(PROJECT_ROOT, "data", "saved_quotes")
 SAVED_QUOTE_RETENTION_DAYS = 45
+
+
+def get_saved_quotes_dir() -> str:
+    """
+    Quick-win persistent local storage path for saved quotes.
+    Priority:
+    1) QUOTE_TOOL_SAVED_QUOTES_DIR env var
+    2) C:\\QuoteToolData\\saved_quotes on Windows
+    3) ~/QuoteToolData/saved_quotes on non-Windows
+    """
+    env_override = os.getenv("QUOTE_TOOL_SAVED_QUOTES_DIR", "").strip()
+    if env_override:
+        return os.path.abspath(env_override)
+
+    if os.name == "nt":
+        return r"C:\QuoteToolData\saved_quotes"
+
+    return os.path.abspath(os.path.expanduser("~/QuoteToolData/saved_quotes"))
+
+
+SAVED_QUOTES_DIR = get_saved_quotes_dir()
 
 # ============================================================
 # Security
@@ -1678,6 +1697,7 @@ def save_quote(request: Request, req: SaveQuoteReq):
     }
 
     try:
+        os.makedirs(SAVED_QUOTES_DIR, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, ensure_ascii=False)
     except Exception:
