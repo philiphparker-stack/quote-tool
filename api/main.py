@@ -969,6 +969,27 @@ def draw_category_header(c: canvas.Canvas, x: float, y_top: float, width: float,
     return header_h
 
 
+# ---------------------------------------------------------------------------
+# Grid card sizing. These are shared by measure_card_height and draw_card so a
+# card's measured height always matches what gets drawn. Shrinking these makes
+# every card (box, text, and image) smaller so more products fit per page.
+# ---------------------------------------------------------------------------
+CARD_PAD = 6
+CARD_CORNER = 6
+CARD_TITLE_TOP = 11          # baseline offset of first title line from card top
+CARD_TITLE_SIZE = 6.2
+CARD_TITLE_MIN = 4.8
+CARD_TITLE_LEAD = 1.0        # extra leading between title lines
+CARD_PRICE_TOP_GAP = 5       # gap between title block and price
+CARD_PRICE_SIZE = 8.6        # single price line
+CARD_PRICE_SIZE_MULTI = 7.0  # when two price lines are shown
+CARD_PRICE_LEAD = 1.2
+CARD_IMG_TOP_GAP = 5         # gap between price block and image
+CARD_IMG_SIZE = 24
+CARD_BOTTOM_PAD = 6
+CARD_META_GAP = 5            # gap between image and manufacturer/SKU text
+
+
 def measure_card_height(
     c: canvas.Canvas,
     it: Dict[str, Any],
@@ -980,7 +1001,7 @@ def measure_card_height(
     Mirrors the vertical layout in draw_card so build_pdf_grid can size each
     row to its tallest card instead of forcing every card to the worst case.
     """
-    pad = 8
+    pad = CARD_PAD
     inner_w = card_w - (pad * 2)
 
     title_lines, title_size = fit_lines(
@@ -989,22 +1010,21 @@ def measure_card_height(
         inner_w,
         "Helvetica-Bold",
         max_lines=3,
-        start_size=7.2,
-        min_size=5.5,
+        start_size=CARD_TITLE_SIZE,
+        min_size=CARD_TITLE_MIN,
     )
-    title_block_h = max(1, len(title_lines)) * (title_size + 1.2)
+    title_block_h = max(1, len(title_lines)) * (title_size + CARD_TITLE_LEAD)
 
     price_lines = get_price_lines(it, fallback_mode)
-    price_size = 8.4 if len(price_lines) > 1 else 10.4
-    price_gap = price_size + 1.4
+    price_size = CARD_PRICE_SIZE_MULTI if len(price_lines) > 1 else CARD_PRICE_SIZE
+    price_gap = price_size + CARD_PRICE_LEAD
     price_line_count = min(len(price_lines), 2)
 
-    # 14 = title baseline offset from card top; 6 = gap before price.
     price_block_bottom_from_top = (
-        14 + title_block_h + 6 + ((price_line_count - 1) * price_gap) + price_size
+        CARD_TITLE_TOP + title_block_h + CARD_PRICE_TOP_GAP
+        + ((price_line_count - 1) * price_gap) + price_size
     )
-    img_size = 34
-    return price_block_bottom_from_top + 6 + img_size + 8
+    return price_block_bottom_from_top + CARD_IMG_TOP_GAP + CARD_IMG_SIZE + CARD_BOTTOM_PAD
 
 
 def draw_card(
@@ -1017,13 +1037,13 @@ def draw_card(
     fallback_mode: str,
 ):
     c.setFillColor(colors.Color(0, 0, 0, alpha=0.05))
-    c.roundRect(x + 1.6, y_top - card_h - 1.6, card_w, card_h, 9, stroke=0, fill=1)
+    c.roundRect(x + 1.4, y_top - card_h - 1.4, card_w, card_h, CARD_CORNER, stroke=0, fill=1)
 
     c.setStrokeColor(colors.Color(0, 0, 0, alpha=0.16))
     c.setFillColor(colors.white)
-    c.roundRect(x, y_top - card_h, card_w, card_h, 9, stroke=1, fill=1)
+    c.roundRect(x, y_top - card_h, card_w, card_h, CARD_CORNER, stroke=1, fill=1)
 
-    pad = 8
+    pad = CARD_PAD
     inner_x = x + pad
     inner_w = card_w - (pad * 2)
 
@@ -1033,22 +1053,22 @@ def draw_card(
         inner_w,
         "Helvetica-Bold",
         max_lines=3,
-        start_size=7.2,
-        min_size=5.5,
+        start_size=CARD_TITLE_SIZE,
+        min_size=CARD_TITLE_MIN,
     )
 
-    title_y = y_top - 14
+    title_y = y_top - CARD_TITLE_TOP
     c.setFillColor(BRAND_BLUE_DARK)
     c.setFont("Helvetica-Bold", title_size)
     for i, line in enumerate(title_lines[:3]):
-        c.drawString(inner_x, title_y - (i * (title_size + 1.2)), line)
+        c.drawString(inner_x, title_y - (i * (title_size + CARD_TITLE_LEAD)), line)
 
-    title_block_h = max(1, len(title_lines)) * (title_size + 1.2)
-    price_start_y = title_y - title_block_h - 6
+    title_block_h = max(1, len(title_lines)) * (title_size + CARD_TITLE_LEAD)
+    price_start_y = title_y - title_block_h - CARD_PRICE_TOP_GAP
 
     price_lines = get_price_lines(it, fallback_mode)
-    price_size = 8.4 if len(price_lines) > 1 else 10.4
-    price_gap = price_size + 1.4
+    price_size = CARD_PRICE_SIZE_MULTI if len(price_lines) > 1 else CARD_PRICE_SIZE
+    price_gap = price_size + CARD_PRICE_LEAD
 
     c.setFillColor(colors.black)
     for idx, line in enumerate(price_lines[:2]):
@@ -1063,10 +1083,10 @@ def draw_card(
     # in build_pdf_grid, this reclaims the empty space short cards used to waste.
     price_line_count = min(len(price_lines), 2)
     price_block_bottom = price_start_y - ((price_line_count - 1) * price_gap) - price_size
-    img_size = 34
+    img_size = CARD_IMG_SIZE
     img_x = inner_x
-    img_y = price_block_bottom - 6 - img_size
-    img_y = max(img_y, (y_top - card_h) + 8)
+    img_y = price_block_bottom - CARD_IMG_TOP_GAP - img_size
+    img_y = max(img_y, (y_top - card_h) + CARD_BOTTOM_PAD)
 
     img_path = resolve_item_image_path(norm(it.get("image")))
     img_reader = get_image_reader_from_path(img_path, max_px=180, quality=55) if img_path else None
@@ -1088,7 +1108,7 @@ def draw_card(
     else:
         draw_placeholder_image(c, img_x, img_y, img_size, img_size)
 
-    meta_x = img_x + img_size + 6
+    meta_x = img_x + img_size + CARD_META_GAP
     meta_w = card_w - (meta_x - x) - pad
 
     mfr_lines, mfr_size = fit_lines(
@@ -1097,12 +1117,12 @@ def draw_card(
         meta_w,
         "Helvetica",
         max_lines=2,
-        start_size=5.4,
-        min_size=4.6,
+        start_size=5.0,
+        min_size=4.2,
     )
 
-    line_gap = 0.8
-    mfr_start_y = img_y + 18
+    line_gap = 0.7
+    mfr_start_y = img_y + (img_size / 2) + 3
 
     c.setFillColor(SOFT_TEXT)
     c.setFont("Helvetica", mfr_size)
@@ -1114,8 +1134,8 @@ def draw_card(
         norm(it.get("id")),
         meta_w,
         "Helvetica",
-        start_size=5.2,
-        min_size=4.5,
+        start_size=4.8,
+        min_size=4.2,
     )
     c.setFillColor(colors.Color(0, 0, 0, alpha=0.58))
     c.setFont("Helvetica", sku_size)
@@ -1297,16 +1317,12 @@ def build_pdf_grid(
     left = 30
     right = 30
     bottom = 34
-    gutter = 8
+    gutter = 7
     section_gap = 12
-    row_gap = 8
+    row_gap = 6
 
     usable_w = W - left - right
     card_w = (usable_w - gutter * (cols - 1)) / cols
-    # Upper bound on a card's content height; individual rows are sized to their
-    # tallest card via measure_card_height, so this is only used for the
-    # conservative "is there room to start a section?" page-break checks.
-    max_card_h = 112
 
     half_section_w = (usable_w - section_gap) / 2
     half_section_inner_gutter = max(4, half_section_w - (card_w * 2))
