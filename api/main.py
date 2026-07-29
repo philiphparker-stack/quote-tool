@@ -898,8 +898,13 @@ def draw_header(
     customer_name: str,
     customer_logo_reader: Optional[ImageReader] = None,
 ):
-    c.setFillColor(BRAND_BLUE)
+    # ===== TEMPORARY DEPLOY CANARY — remove after confirming deploy =====
+    c.setFillColor(colors.red)
     c.rect(0, H - 20, W, 20, stroke=0, fill=1)
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 12)
+    c.drawCentredString(W / 2, H - 15, ">>> DEPLOY TEST — NEW VERSION IS LIVE <<<")
+    # ===================================================================
 
     emser_reader = get_emser_logo_reader()
     if emser_reader:
