@@ -969,6 +969,44 @@ def draw_category_header(c: canvas.Canvas, x: float, y_top: float, width: float,
     return header_h
 
 
+def measure_card_height(
+    c: canvas.Canvas,
+    it: Dict[str, Any],
+    card_w: float,
+    fallback_mode: str,
+) -> float:
+    """Compute the height a card actually needs for its content.
+
+    Mirrors the vertical layout in draw_card so build_pdf_grid can size each
+    row to its tallest card instead of forcing every card to the worst case.
+    """
+    pad = 8
+    inner_w = card_w - (pad * 2)
+
+    title_lines, title_size = fit_lines(
+        c,
+        norm(it.get("name")),
+        inner_w,
+        "Helvetica-Bold",
+        max_lines=3,
+        start_size=7.2,
+        min_size=5.5,
+    )
+    title_block_h = max(1, len(title_lines)) * (title_size + 1.2)
+
+    price_lines = get_price_lines(it, fallback_mode)
+    price_size = 8.4 if len(price_lines) > 1 else 10.4
+    price_gap = price_size + 1.4
+    price_line_count = min(len(price_lines), 2)
+
+    # 14 = title baseline offset from card top; 6 = gap before price.
+    price_block_bottom_from_top = (
+        14 + title_block_h + 6 + ((price_line_count - 1) * price_gap) + price_size
+    )
+    img_size = 34
+    return price_block_bottom_from_top + 6 + img_size + 8
+
+
 def draw_card(
     c: canvas.Canvas,
     x: float,
@@ -1013,14 +1051,22 @@ def draw_card(
     price_gap = price_size + 1.4
 
     c.setFillColor(colors.black)
-    c.setFont("Helvetica-Bold", price_size)
     for idx, line in enumerate(price_lines[:2]):
-        c.drawString(inner_x, price_start_y - (idx * price_gap), line)
+        price_txt, fitted_price_size = fit_one_line(
+            c, line, inner_w, "Helvetica-Bold", price_size, 6.0
+        )
+        c.setFont("Helvetica-Bold", fitted_price_size)
+        c.drawString(inner_x, price_start_y - (idx * price_gap), price_txt)
 
-    img_size = 36
+    # Flow the image directly beneath the price block (with a small gap) rather
+    # than pinning it to the card bottom. Combined with per-row variable heights
+    # in build_pdf_grid, this reclaims the empty space short cards used to waste.
+    price_line_count = min(len(price_lines), 2)
+    price_block_bottom = price_start_y - ((price_line_count - 1) * price_gap) - price_size
+    img_size = 34
     img_x = inner_x
-    extra_price_space = max(0, (len(price_lines) - 1) * price_gap)
-    img_y = y_top - card_h + 16 - extra_price_space
+    img_y = price_block_bottom - 6 - img_size
+    img_y = max(img_y, (y_top - card_h) + 8)
 
     img_path = resolve_item_image_path(norm(it.get("image")))
     img_reader = get_image_reader_from_path(img_path, max_px=180, quality=55) if img_path else None
@@ -1247,17 +1293,20 @@ def build_pdf_grid(
     c = canvas.Canvas(buf, pagesize=letter, pageCompression=1)
     W, H = letter
 
-    cols = 4
+    cols = 5
     left = 30
     right = 30
     bottom = 34
     gutter = 8
     section_gap = 12
-    row_gap = 9
+    row_gap = 8
 
     usable_w = W - left - right
     card_w = (usable_w - gutter * (cols - 1)) / cols
-    card_h = 112
+    # Upper bound on a card's content height; individual rows are sized to their
+    # tallest card via measure_card_height, so this is only used for the
+    # conservative "is there room to start a section?" page-break checks.
+    max_card_h = 112
 
     half_section_w = (usable_w - section_gap) / 2
     half_section_inner_gutter = max(4, half_section_w - (card_w * 2))
@@ -1275,8 +1324,6 @@ def build_pdf_grid(
     y = header_divider_y - 10
 
     groups = group_items_for_pdf(items, categorize_by=categorize_by)
-    min_full_section_space = 18 + 8 + card_h + row_gap
-    min_half_section_space = estimate_half_width_section_height(card_h)
 
     def new_page():
         nonlocal y, page_num, header_divider_y
@@ -1307,7 +1354,17 @@ def build_pdf_grid(
                 if is_half_width_group(next_cat_items):
                     next_pair = (next_group_label, next_cat_items)
 
-            needed_height = min_half_section_space
+            def section_card_h(section_items):
+                return max(
+                    measure_card_height(c, it, card_w, fallback_mode)
+                    for it in section_items
+                )
+
+            left_card_h = section_card_h(cat_items)
+            right_card_h = section_card_h(next_pair[1]) if next_pair else 0
+            pair_card_h = max(left_card_h, right_card_h)
+
+            needed_height = estimate_half_width_section_height(pair_card_h)
 
             if y - needed_height < bottom:
                 new_page()
@@ -1321,7 +1378,7 @@ def build_pdf_grid(
                 cat_items=cat_items,
                 fallback_mode=fallback_mode,
                 card_w=card_w,
-                card_h=card_h,
+                card_h=pair_card_h,
                 gutter=half_section_inner_gutter,
             )
 
@@ -1336,7 +1393,7 @@ def build_pdf_grid(
                     cat_items=next_pair[1],
                     fallback_mode=fallback_mode,
                     card_w=card_w,
-                    card_h=card_h,
+                    card_h=pair_card_h,
                     gutter=half_section_inner_gutter,
                 )
 
@@ -1351,38 +1408,43 @@ def build_pdf_grid(
         # ----------------------------------------------------
         # Full-width categories: 3+ items
         # ----------------------------------------------------
-        if y - min_full_section_space < bottom:
+        # Split the category into rows of `cols` items each. Each row's height is
+        # the tallest card in it, so short cards no longer inflate the whole grid.
+        rows = [cat_items[r:r + cols] for r in range(0, len(cat_items), cols)]
+
+        def room_for_first_row() -> bool:
+            first_row_h = max(
+                measure_card_height(c, it, card_w, fallback_mode) for it in rows[0]
+            )
+            return (y - (18 + 8 + first_row_h)) >= bottom
+
+        if not room_for_first_row():
             new_page()
 
         label = group_label
         header_h = draw_category_header(c, left, y, usable_w, label)
         y -= (header_h + 8)
 
-        x = left
-        col = 0
+        for r_idx, row_items in enumerate(rows):
+            row_h = max(
+                measure_card_height(c, it, card_w, fallback_mode) for it in row_items
+            )
 
-        for it in cat_items:
-            if col == 0 and (y - card_h) < bottom:
+            if (y - row_h) < bottom:
                 new_page()
-                if y - min_full_section_space < bottom:
-                    new_page()
-                header_h = draw_category_header(c, left, y, usable_w, label + " (cont.)")
+                header_h = draw_category_header(
+                    c, left, y, usable_w, label + " (cont.)"
+                )
                 y -= (header_h + 8)
 
-            draw_card(c, x, y, card_w, card_h, it, fallback_mode)
-
-            col += 1
-            if col == cols:
-                col = 0
-                x = left
-                y -= (card_h + row_gap)
-            else:
+            x = left
+            for it in row_items:
+                draw_card(c, x, y, card_w, row_h, it, fallback_mode)
                 x += (card_w + gutter)
 
-        if col != 0:
-            y -= (card_h + row_gap)
-        else:
-            y -= 4
+            y -= (row_h + row_gap)
+
+        y -= 4
 
         i += 1
 
