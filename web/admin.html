@@ -88,19 +88,9 @@
       </div>
       <div class="hint">Pick an existing one from the list, or type a new one.</div>
 
-      <div class="row">
-        <div>
-          <label>Warehouse price *</label>
-          <input type="number" id="price_oow" step="0.01" min="0" required placeholder="0.00" />
-        </div>
-        <div>
-          <label>Direct price *</label>
-          <input type="number" id="price_direct" step="0.01" min="0" required placeholder="0.00" />
-        </div>
-      </div>
-
       <label>Unit (UOM)</label>
       <input type="text" id="uom" value="ea" />
+      <div class="hint">Price isn't set here — it's entered per quote when you build one.</div>
 
       <label>Product image</label>
       <div class="filedrop" id="filedrop">
@@ -118,8 +108,8 @@
     <h2>Products you've added</h2>
     <div class="hint" style="margin-bottom:10px">These live on the persistent volume and survive deploys. The built-in catalog isn't shown here.</div>
     <table>
-      <thead><tr><th></th><th>Name</th><th>SKU</th><th>Whse</th><th></th></tr></thead>
-      <tbody id="list"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+      <thead><tr><th></th><th>Name</th><th>SKU</th><th></th></tr></thead>
+      <tbody id="list"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
     </table>
   </div>
 </div>
@@ -185,15 +175,13 @@ async function loadList(){
     const res = await api("/admin/products");
     const d = await res.json();
     const rows = d.products||[];
-    if(!rows.length){ $("list").innerHTML = `<tr><td colspan="5" class="empty">None yet.</td></tr>`; return; }
+    if(!rows.length){ $("list").innerHTML = `<tr><td colspan="4" class="empty">None yet.</td></tr>`; return; }
     $("list").innerHTML = rows.map(p=>{
       const img = p.image ? (p.image.startsWith("product-images/") ? "/"+p.image : p.image) : "assets/items/comingsoon.png";
-      const whse = (p.price_oow!=null) ? "$"+Number(p.price_oow).toFixed(2) : "—";
       return `<tr>
         <td><img src="${img}" onerror="this.src='assets/items/comingsoon.png'"/></td>
         <td>${esc(p.name)}<div style="color:#5a6472;font-size:11px">${esc(p.manufacturer)} · ${esc(p.category)}</div></td>
         <td style="font-family:monospace;font-size:12px">${esc(p.id)}</td>
-        <td>${whse}</td>
         <td><button class="del" data-sku="${esc(p.id)}">Delete</button></td>
       </tr>`;
     }).join("");
@@ -219,8 +207,6 @@ $("form").addEventListener("submit", async (e)=>{
   fd.append("id", $("sku").value.trim());
   fd.append("manufacturer", $("manufacturer").value.trim());
   fd.append("category", $("category").value.trim());
-  fd.append("price_oow", $("price_oow").value);
-  fd.append("price_direct", $("price_direct").value);
   fd.append("uom", ($("uom").value.trim()||"ea"));
   if($("image").files[0]) fd.append("image", $("image").files[0]);
 

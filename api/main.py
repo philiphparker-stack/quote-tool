@@ -1947,8 +1947,6 @@ def custom_product_summary(p: Dict[str, Any]) -> Dict[str, Any]:
         "manufacturer": norm(p.get("manufacturer")),
         "category": norm(p.get("category")),
         "uom": norm(p.get("uom")) or "ea",
-        "price_direct": p.get("price_direct"),
-        "price_oow": p.get("price_oow"),
         "image": norm(p.get("image")),
     }
 
@@ -1967,8 +1965,6 @@ async def add_custom_product(
     id: str = Form(...),
     category: str = Form(...),
     manufacturer: str = Form(...),
-    price_oow: float = Form(...),
-    price_direct: float = Form(...),
     uom: str = Form("ea"),
     image: Optional[UploadFile] = File(None),
 ):
@@ -2002,8 +1998,9 @@ async def add_custom_product(
         "manufacturer": manufacturer,
         "category": category,
         "uom": uom,
-        "price_direct": price_direct,
-        "price_oow": price_oow,
+        # Prices are entered per quote line, not stored on the catalog product.
+        "price_direct": None,
+        "price_oow": None,
         "image": image_field,
         "aliases": "",
         "search_terms": f"{category} {manufacturer} {sku} {name}".upper(),
