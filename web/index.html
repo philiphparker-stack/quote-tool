@@ -1643,7 +1643,11 @@
 
     function getImageSrc(item) {
       const img = String(item.image || "").trim();
-      return img ? `assets/items/${encodeURI(img)}` : COMING_SOON_SRC;
+      if (!img) return COMING_SOON_SRC;
+      // Custom-product images (added via /admin) are served from the volume.
+      if (img.startsWith("http") || img.startsWith("/")) return img;
+      if (img.startsWith("product-images/")) return `/${encodeURI(img)}`;
+      return `assets/items/${encodeURI(img)}`;
     }
 
     function updateSelectedCount() {

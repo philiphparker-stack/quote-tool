@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Add Products — Emser Quote Tool</title>
+<style>
+  :root{
+    --blue:#0b2e6e; --blue-dark:#0a2456; --gold:#c08a3e;
+    --ink:#1b2430; --soft:#5a6472; --line:#e2e6ec; --bg:#f4f6f9; --card:#ffffff;
+    --ok:#1a7f47; --err:#c0392b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  header{background:var(--blue);color:#fff;padding:14px 22px;display:flex;align-items:center;gap:14px;}
+  header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:.2px;}
+  header .spacer{flex:1}
+  header a{color:#dfe7f5;text-decoration:none;font-size:13px;border:1px solid rgba(255,255,255,.35);
+    padding:6px 12px;border-radius:7px;}
+  header a:hover{background:rgba(255,255,255,.12)}
+  .wrap{max-width:960px;margin:24px auto;padding:0 18px;display:grid;grid-template-columns:1fr;gap:22px;}
+  @media(min-width:820px){.wrap{grid-template-columns:1.1fr .9fr;align-items:start;}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;
+    box-shadow:0 1px 2px rgba(10,20,40,.04);}
+  .card h2{margin:0 0 14px;font-size:15px;color:var(--blue-dark);}
+  label{display:block;font-weight:600;font-size:12.5px;margin:12px 0 5px;color:var(--soft);}
+  input[type=text],input[type=number]{width:100%;padding:9px 11px;border:1px solid var(--line);
+    border-radius:8px;font-size:14px;background:#fff;color:var(--ink);}
+  input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(11,46,110,.12);}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .hint{font-size:11.5px;color:var(--soft);margin-top:4px;font-weight:500;}
+  .filedrop{margin-top:6px;border:1.5px dashed var(--line);border-radius:9px;padding:14px;text-align:center;
+    background:#fbfcfe;cursor:pointer;}
+  .filedrop:hover{border-color:var(--blue);}
+  .filedrop img{max-height:110px;border-radius:6px;margin-top:8px;}
+  button.primary{margin-top:18px;width:100%;background:var(--blue);color:#fff;border:0;border-radius:9px;
+    padding:12px;font-size:14.5px;font-weight:700;cursor:pointer;}
+  button.primary:hover{background:var(--blue-dark);}
+  button.primary:disabled{opacity:.6;cursor:default;}
+  .msg{margin-top:12px;font-size:13px;font-weight:600;min-height:18px;}
+  .msg.ok{color:var(--ok);} .msg.err{color:var(--err);}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  th{color:var(--soft);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;}
+  td img{width:34px;height:34px;object-fit:contain;border-radius:5px;background:#f0f2f5;}
+  .del{background:#fff;border:1px solid var(--line);color:var(--err);border-radius:7px;padding:5px 9px;
+    cursor:pointer;font-size:12px;font-weight:600;}
+  .del:hover{background:#fdecea;border-color:var(--err);}
+  .empty{color:var(--soft);padding:14px 4px;font-style:italic;}
+  /* auth overlay */
+  #auth{position:fixed;inset:0;background:rgba(12,22,44,.55);display:none;align-items:center;justify-content:center;z-index:20;}
+  #auth .box{background:#fff;border-radius:12px;padding:26px;width:320px;box-shadow:0 12px 40px rgba(0,0,0,.25);}
+  #auth h3{margin:0 0 6px;color:var(--blue-dark);font-size:16px;}
+  #auth p{margin:0 0 14px;color:var(--soft);font-size:13px;}
+  #authErr{color:var(--err);font-size:12.5px;font-weight:600;min-height:16px;margin-top:8px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>Emser Quote Tool · Add Products</h1>
+  <div class="spacer"></div>
+  <a href="/">← Back to Quote Tool</a>
+</header>
+
+<div class="wrap">
+  <div class="card">
+    <h2>New product</h2>
+    <form id="form">
+      <label>Product name *</label>
+      <input type="text" id="name" required placeholder="e.g. LATICRETE 254 PLATINUM 50LB" />
+
+      <label>SKU / ID *</label>
+      <input type="text" id="sku" required placeholder="e.g. ZLC0254-0050-21" />
+      <div class="hint">Must be unique. This is the code that prints on the quote.</div>
+
+      <div class="row">
+        <div>
+          <label>Manufacturer *</label>
+          <input type="text" id="manufacturer" list="mfrList" required placeholder="e.g. LATICRETE" />
+          <datalist id="mfrList"></datalist>
+        </div>
+        <div>
+          <label>Category *</label>
+          <input type="text" id="category" list="catList" required placeholder="e.g. THINSET" />
+          <datalist id="catList"></datalist>
+        </div>
+      </div>
+      <div class="hint">Pick an existing one from the list, or type a new one.</div>
+
+      <div class="row">
+        <div>
+          <label>Warehouse price *</label>
+          <input type="number" id="price_oow" step="0.01" min="0" required placeholder="0.00" />
+        </div>
+        <div>
+          <label>Direct price *</label>
+          <input type="number" id="price_direct" step="0.01" min="0" required placeholder="0.00" />
+        </div>
+      </div>
+
+      <label>Unit (UOM)</label>
+      <input type="text" id="uom" value="ea" />
+
+      <label>Product image</label>
+      <div class="filedrop" id="filedrop">
+        <span id="fileLabel">Click to choose a JPG / PNG / WEBP (optional)</span>
+        <input type="file" id="image" accept="image/*" style="display:none" />
+        <div id="preview"></div>
+      </div>
+
+      <button class="primary" id="submitBtn" type="submit">Add product to catalog</button>
+      <div class="msg" id="msg"></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Products you've added</h2>
+    <div class="hint" style="margin-bottom:10px">These live on the persistent volume and survive deploys. The built-in catalog isn't shown here.</div>
+    <table>
+      <thead><tr><th></th><th>Name</th><th>SKU</th><th>Whse</th><th></th></tr></thead>
+      <tbody id="list"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="auth">
+  <div class="box">
+    <h3>Password required</h3>
+    <p>Enter the quote tool password to manage products.</p>
+    <input type="password" id="authPw" placeholder="Password" style="width:100%;padding:9px 11px;border:1px solid #e2e6ec;border-radius:8px;" />
+    <div id="authErr"></div>
+    <button class="primary" id="authBtn" type="button" style="margin-top:14px">Unlock</button>
+  </div>
+</div>
+
+<script>
+const PW_KEY = "quote_tool_password";
+const $ = (id) => document.getElementById(id);
+const getPw = () => localStorage.getItem(PW_KEY) || "";
+const setPw = (v) => localStorage.setItem(PW_KEY, v);
+const headers = () => ({ "X-Quote-Password": getPw() });
+
+function showAuth(err){ $("auth").style.display="flex"; $("authErr").textContent=err||""; $("authPw").focus(); }
+function hideAuth(){ $("auth").style.display="none"; }
+
+async function api(url, opts={}){
+  const res = await fetch(url, { ...opts, headers: { ...(opts.headers||{}), ...headers() } });
+  if(res.status===401){ showAuth("Incorrect password."); throw new Error("unauth"); }
+  return res;
+}
+
+// ---- auth ----
+$("authBtn").addEventListener("click", async () => {
+  setPw($("authPw").value.trim());
+  hideAuth();
+  await boot();
+});
+$("authPw").addEventListener("keydown", (e)=>{ if(e.key==="Enter") $("authBtn").click(); });
+
+// ---- image picker ----
+$("filedrop").addEventListener("click", ()=> $("image").click());
+$("image").addEventListener("change", ()=>{
+  const f = $("image").files[0];
+  if(!f){ $("preview").innerHTML=""; $("fileLabel").textContent="Click to choose a JPG / PNG / WEBP (optional)"; return; }
+  $("fileLabel").textContent = f.name;
+  const r = new FileReader();
+  r.onload = e => $("preview").innerHTML = `<img src="${e.target.result}" alt="preview"/>`;
+  r.readAsDataURL(f);
+});
+
+// ---- load categories / manufacturers ----
+async function loadFilters(){
+  try{
+    const res = await api("/filters");
+    const d = await res.json();
+    $("mfrList").innerHTML = (d.manufacturers||[]).map(m=>`<option value="${m}">`).join("");
+    $("catList").innerHTML = (d.categories||[]).map(c=>`<option value="${c}">`).join("");
+  }catch(e){}
+}
+
+// ---- list existing custom products ----
+async function loadList(){
+  try{
+    const res = await api("/admin/products");
+    const d = await res.json();
+    const rows = d.products||[];
+    if(!rows.length){ $("list").innerHTML = `<tr><td colspan="5" class="empty">None yet.</td></tr>`; return; }
+    $("list").innerHTML = rows.map(p=>{
+      const img = p.image ? (p.image.startsWith("product-images/") ? "/"+p.image : p.image) : "assets/items/comingsoon.png";
+      const whse = (p.price_oow!=null) ? "$"+Number(p.price_oow).toFixed(2) : "—";
+      return `<tr>
+        <td><img src="${img}" onerror="this.src='assets/items/comingsoon.png'"/></td>
+        <td>${esc(p.name)}<div style="color:#5a6472;font-size:11px">${esc(p.manufacturer)} · ${esc(p.category)}</div></td>
+        <td style="font-family:monospace;font-size:12px">${esc(p.id)}</td>
+        <td>${whse}</td>
+        <td><button class="del" data-sku="${esc(p.id)}">Delete</button></td>
+      </tr>`;
+    }).join("");
+    document.querySelectorAll(".del").forEach(b=>b.addEventListener("click", ()=>del(b.dataset.sku)));
+  }catch(e){}
+}
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+async function del(sku){
+  if(!confirm(`Delete "${sku}" from the catalog?`)) return;
+  try{
+    await api("/admin/products/"+encodeURIComponent(sku), { method:"DELETE" });
+    await loadList();
+  }catch(e){}
+}
+
+// ---- submit ----
+$("form").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const msg = $("msg"); msg.textContent=""; msg.className="msg";
+  const fd = new FormData();
+  fd.append("name", $("name").value.trim());
+  fd.append("id", $("sku").value.trim());
+  fd.append("manufacturer", $("manufacturer").value.trim());
+  fd.append("category", $("category").value.trim());
+  fd.append("price_oow", $("price_oow").value);
+  fd.append("price_direct", $("price_direct").value);
+  fd.append("uom", ($("uom").value.trim()||"ea"));
+  if($("image").files[0]) fd.append("image", $("image").files[0]);
+
+  $("submitBtn").disabled = true; $("submitBtn").textContent = "Saving…";
+  try{
+    const res = await api("/admin/products", { method:"POST", body: fd });
+    if(!res.ok){
+      const err = await res.json().catch(()=>({detail:"Save failed."}));
+      msg.textContent = err.detail || "Save failed."; msg.className="msg err";
+    }else{
+      const d = await res.json();
+      msg.textContent = `Added "${d.product.name}" ✓  It's now in the catalog.`; msg.className="msg ok";
+      $("form").reset(); $("preview").innerHTML=""; $("fileLabel").textContent="Click to choose a JPG / PNG / WEBP (optional)"; $("uom").value="ea";
+      await loadList();
+    }
+  }catch(e){
+    if(e.message!=="unauth"){ msg.textContent="Network error."; msg.className="msg err"; }
+  }finally{
+    $("submitBtn").disabled=false; $("submitBtn").textContent="Add product to catalog";
+  }
+});
+
+// ---- boot ----
+async function boot(){
+  if(!getPw()){ showAuth(); return; }
+  // validate password with a lightweight authed call
+  try{
+    const res = await fetch("/admin/products", { headers: headers() });
+    if(res.status===401){ showAuth("Enter the quote tool password."); return; }
+    hideAuth();
+    await loadFilters();
+    await loadList();
+  }catch(e){ showAuth(); }
+}
+boot();
+</script>
+</body>
+</html>

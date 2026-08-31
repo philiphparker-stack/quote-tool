@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from typing import List, Dict, Any, Optional, Tuple
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, Form, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -58,6 +58,17 @@ def get_saved_quotes_dir() -> str:
 
 
 SAVED_QUOTES_DIR = get_saved_quotes_dir()
+
+# Custom products added through the in-app "Add Product" page live next to the
+# saved quotes on the same persistent volume, so they survive redeploys just
+# like saved quotes. DATA_DIR is the volume root (parent of saved_quotes).
+DATA_DIR = os.path.dirname(SAVED_QUOTES_DIR)
+CUSTOM_PRODUCTS_FILE = os.path.join(DATA_DIR, "custom_products.json")
+CUSTOM_IMAGES_DIR = os.path.join(DATA_DIR, "product_images")
+try:
+    os.makedirs(CUSTOM_IMAGES_DIR, exist_ok=True)
+except Exception:
+    pass
 
 # ============================================================
 # Security
@@ -148,7 +159,25 @@ def require_password(request: Request):
 # ============================================================
 # Helpers: data loading
 # ============================================================
-def load_items_list() -> List[Dict[str, Any]]:
+def load_custom_products() -> List[Dict[str, Any]]:
+    """Products added through the /admin page, stored on the persistent volume."""
+    if not os.path.exists(CUSTOM_PRODUCTS_FILE):
+        return []
+    try:
+        with open(CUSTOM_PRODUCTS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def save_custom_products(products: List[Dict[str, Any]]) -> None:
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(CUSTOM_PRODUCTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(products, f, indent=2, ensure_ascii=False)
+
+
+def load_base_items_list() -> List[Dict[str, Any]]:
     if not os.path.exists(ITEMS_JSON):
         return []
     try:
@@ -157,6 +186,23 @@ def load_items_list() -> List[Dict[str, Any]]:
         return items if isinstance(items, list) else []
     except Exception:
         return []
+
+
+def load_items_list() -> List[Dict[str, Any]]:
+    """Base catalog (items.json) plus any custom products added via /admin.
+
+    A custom product with the same id as a base item overrides it, so edits
+    made through the Add Product page win.
+    """
+    base = load_base_items_list()
+    customs = load_custom_products()
+    if not customs:
+        return base
+
+    custom_ids = {norm(p.get("id")) for p in customs if norm(p.get("id"))}
+    merged = [it for it in base if norm(it.get("id")) not in custom_ids]
+    merged.extend(customs)
+    return merged
 
 
 def load_items_map() -> Dict[str, Dict[str, Any]]:
@@ -733,6 +779,14 @@ def resolve_item_image_path(image_value: str) -> str:
     image_value = norm(image_value).replace("\\", "/").strip()
     if not image_value:
         return COMING_SOON_IMAGE
+    # Custom-product images live on the persistent volume, referenced as
+    # "product-images/<file>" (optionally with a leading slash).
+    stripped = image_value.lstrip("/")
+    if stripped.startswith("product-images/"):
+        cand = os.path.join(CUSTOM_IMAGES_DIR, os.path.basename(stripped))
+        if os.path.exists(cand):
+            return cand
+        return COMING_SOON_IMAGE if os.path.exists(COMING_SOON_IMAGE) else ""
     candidate = os.path.join(IMAGES_DIR, image_value)
     if os.path.exists(candidate):
         return candidate
@@ -1884,6 +1938,124 @@ def generate(request: Request, req: GenerateReq):
 
 
 # ============================================================
+# Admin: add / manage catalog products (persisted on the volume)
+# ============================================================
+def custom_product_summary(p: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": norm(p.get("id")),
+        "name": norm(p.get("name")),
+        "manufacturer": norm(p.get("manufacturer")),
+        "category": norm(p.get("category")),
+        "uom": norm(p.get("uom")) or "ea",
+        "price_direct": p.get("price_direct"),
+        "price_oow": p.get("price_oow"),
+        "image": norm(p.get("image")),
+    }
+
+
+@app.get("/admin/products")
+def list_custom_products(request: Request):
+    require_password(request)
+    products = load_custom_products()
+    return {"products": [custom_product_summary(p) for p in products]}
+
+
+@app.post("/admin/products")
+async def add_custom_product(
+    request: Request,
+    name: str = Form(...),
+    id: str = Form(...),
+    category: str = Form(...),
+    manufacturer: str = Form(...),
+    price_oow: float = Form(...),
+    price_direct: float = Form(...),
+    uom: str = Form("ea"),
+    image: Optional[UploadFile] = File(None),
+):
+    require_password(request)
+
+    sku = norm(id)
+    name = norm(name)
+    category = norm(category)
+    manufacturer = norm(manufacturer)
+    uom = norm(uom) or "ea"
+
+    if not sku or not name or not category or not manufacturer:
+        raise HTTPException(status_code=400, detail="Name, SKU, category, and manufacturer are all required.")
+
+    image_field = ""
+    if image is not None and (image.filename or "").strip():
+        try:
+            raw = await image.read()
+            img = Image.open(BytesIO(raw)).convert("RGB")
+            safe = re.sub(r"[^A-Za-z0-9_-]", "_", sku) or uuid.uuid4().hex
+            filename = f"{safe}.webp"
+            os.makedirs(CUSTOM_IMAGES_DIR, exist_ok=True)
+            img.save(os.path.join(CUSTOM_IMAGES_DIR, filename), "WEBP", quality=80, method=6)
+            image_field = f"product-images/{filename}"
+        except Exception:
+            raise HTTPException(status_code=400, detail="Could not read that image file. Use a JPG, PNG, or WEBP.")
+
+    product = {
+        "id": sku,
+        "name": name,
+        "manufacturer": manufacturer,
+        "category": category,
+        "uom": uom,
+        "price_direct": price_direct,
+        "price_oow": price_oow,
+        "image": image_field,
+        "aliases": "",
+        "search_terms": f"{category} {manufacturer} {sku} {name}".upper(),
+        "_custom": True,
+    }
+
+    products = load_custom_products()
+    # If this SKU was already added as a custom product, keep the old image
+    # when the edit didn't supply a new one, then replace the entry.
+    existing = next((p for p in products if norm(p.get("id")) == sku), None)
+    if existing and not image_field:
+        product["image"] = norm(existing.get("image"))
+    products = [p for p in products if norm(p.get("id")) != sku]
+    products.append(product)
+    save_custom_products(products)
+
+    return {"ok": True, "product": custom_product_summary(product)}
+
+
+@app.delete("/admin/products/{sku}")
+def delete_custom_product(sku: str, request: Request):
+    require_password(request)
+    target = norm(sku)
+    products = load_custom_products()
+    remaining = [p for p in products if norm(p.get("id")) != target]
+    if len(remaining) == len(products):
+        raise HTTPException(status_code=404, detail="No custom product with that SKU.")
+
+    removed = next((p for p in products if norm(p.get("id")) == target), None)
+    if removed:
+        img = norm(removed.get("image")).lstrip("/")
+        if img.startswith("product-images/"):
+            try:
+                os.remove(os.path.join(CUSTOM_IMAGES_DIR, os.path.basename(img)))
+            except Exception:
+                pass
+
+    save_custom_products(remaining)
+    return {"ok": True}
+
+
+@app.get("/product-images/{filename}")
+def serve_product_image(filename: str):
+    path = os.path.join(CUSTOM_IMAGES_DIR, os.path.basename(filename))
+    if os.path.exists(path):
+        return FileResponse(path)
+    if os.path.exists(COMING_SOON_IMAGE):
+        return FileResponse(COMING_SOON_IMAGE)
+    raise HTTPException(status_code=404, detail="Not found")
+
+
+# ============================================================
 # Serve frontend
 # ============================================================
 app.mount("/assets", StaticFiles(directory=os.path.join(WEB_ROOT, "assets")), name="assets")
@@ -1892,3 +2064,8 @@ app.mount("/assets", StaticFiles(directory=os.path.join(WEB_ROOT, "assets")), na
 @app.get("/")
 def serve_frontend():
     return FileResponse(os.path.join(WEB_ROOT, "index.html"))
+
+
+@app.get("/admin")
+def serve_admin():
+    return FileResponse(os.path.join(WEB_ROOT, "admin.html"))
