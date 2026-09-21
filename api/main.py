@@ -1212,9 +1212,9 @@ def draw_compact_row(
     c.setFillColor(colors.white)
     c.rect(x, y_top - row_h, width, row_h, stroke=1, fill=1)
 
-    img_x = x + 8
-    img_w = 26
-    img_h = 26
+    img_x = x + 6
+    img_w = 15
+    img_h = 15
     img_y = y_top - ((row_h + img_h) / 2)
 
     img_path = resolve_item_image_path(norm(it.get("image")))
@@ -1237,21 +1237,23 @@ def draw_compact_row(
     else:
         draw_placeholder_image(c, img_x, img_y, img_w, img_h)
 
-    name_x = x + 44
-    sku_x = x + 290
-    detail_x = x + 360
-    price_x = x + 455
+    name_x = x + 28
+    sku_x = x + 268
+    detail_x = x + 342
+    price_right = x + width - 8   # pricing is right-aligned to the row edge
+    price_maxw = 116
 
-    text_y = y_top - 21
+    # Vertically center a single line of text in the (now slim) row.
+    text_y = y_top - (row_h / 2) - 2.6
 
     c.setFillColor(BRAND_BLUE_DARK)
-    name_txt, name_size = fit_one_line(c, norm(it.get("name")), 238, "Helvetica-Bold", 9.0, 6.0)
-    c.setFont("Helvetica-Bold", name_size)
+    c.setFont("Helvetica-Bold", 8.0)
+    name_txt = safe_ellipsis_fit(c, norm(it.get("name")), (sku_x - name_x) - 10, "Helvetica-Bold", 8.0)
     c.drawString(name_x, text_y, name_txt)
 
     c.setFillColor(colors.Color(0, 0, 0, alpha=0.74))
-    c.setFont("Helvetica", 7.3)
-    sku_txt, _ = fit_one_line(c, norm(it.get("id")), 84, "Helvetica", 7.3, 6.0)
+    c.setFont("Helvetica", 6.8)
+    sku_txt = safe_ellipsis_fit(c, norm(it.get("id")), (detail_x - sku_x) - 8, "Helvetica", 6.8)
     c.drawString(sku_x, text_y, sku_txt)
 
     if norm(categorize_by).lower() == "manufacturer":
@@ -1259,17 +1261,24 @@ def draw_compact_row(
     else:
         detail_value = pretty_manufacturer(norm(it.get("manufacturer")))
 
-    detail_txt, _ = fit_one_line(c, detail_value, 88, "Helvetica", 7.1, 5.8)
+    detail_max = (price_right - price_maxw) - detail_x - 6
+    detail_txt = safe_ellipsis_fit(c, detail_value, detail_max, "Helvetica", 6.8)
     c.drawString(detail_x, text_y, detail_txt)
 
+    # Compact, single-line pricing, right-aligned so it never runs off the row.
+    # Shorten the "Warehouse:/Direct:" labels used in the card layouts.
     price_lines = get_price_lines(it, fallback_mode)
-    c.setFont("Helvetica-Bold", 7.3)
-    c.setFillColor(colors.black)
-    price_y = text_y
-    for line in price_lines[:2]:
-        draw_txt, _ = fit_one_line(c, line, 125, "Helvetica-Bold", 7.1, 5.8)
-        c.drawString(price_x, price_y, draw_txt)
-        price_y -= 9
+    price_str = "  ".join(
+        ln.replace("Warehouse:", "Whse").replace("Direct:", "Dir")
+        for ln in price_lines[:2]
+    )
+    if price_str:
+        c.setFillColor(colors.black)
+        ps = 7.0
+        while ps > 5.2 and c.stringWidth(price_str, "Helvetica-Bold", ps) > price_maxw:
+            ps -= 0.2
+        c.setFont("Helvetica-Bold", ps)
+        c.drawRightString(price_right, text_y, price_str)
 
 
 def group_items_for_pdf(
@@ -1542,11 +1551,11 @@ def build_pdf_compact(
     right = 30
     bottom = 34
     usable_w = W - left - right
-    row_gap = 4
-    row_h = 50
+    row_gap = 2
+    row_h = 20
     section_header_h = 18
-    section_header_gap = 8
-    column_header_h = 10
+    section_header_gap = 4
+    column_header_h = 9
     section_start_buffer = 6
 
     customer_logo_reader = decode_logo_data(customer_logo_data)
@@ -1578,13 +1587,13 @@ def build_pdf_compact(
         y = header_divider_y - 10
 
     def draw_compact_column_headings(y_top: float) -> float:
-        c.setFont("Helvetica-Bold", 7.2)
+        c.setFont("Helvetica-Bold", 6.6)
         c.setFillColor(SOFT_TEXT)
-        c.drawString(left + 44, y_top - 2, "Description")
-        c.drawString(left + 290, y_top - 2, "SKU")
+        c.drawString(left + 28, y_top - 2, "Description")
+        c.drawString(left + 268, y_top - 2, "SKU")
         third_heading = "Category" if norm(categorize_by).lower() == "manufacturer" else "Manufacturer"
-        c.drawString(left + 360, y_top - 2, third_heading)
-        c.drawString(left + 455, y_top - 2, "Pricing")
+        c.drawString(left + 342, y_top - 2, third_heading)
+        c.drawRightString(left + usable_w - 8, y_top - 2, "Pricing")
         return y_top - column_header_h
 
     min_section_start_space = (
