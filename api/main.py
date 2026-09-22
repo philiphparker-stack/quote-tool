@@ -64,6 +64,9 @@ SAVED_QUOTES_DIR = get_saved_quotes_dir()
 # like saved quotes. DATA_DIR is the volume root (parent of saved_quotes).
 DATA_DIR = os.path.dirname(SAVED_QUOTES_DIR)
 CUSTOM_PRODUCTS_FILE = os.path.join(DATA_DIR, "custom_products.json")
+# Image overrides attach/replace an image on an EXISTING catalog SKU without
+# duplicating the whole product: { "<sku>": "product-images/<file>.webp" }.
+IMAGE_OVERRIDES_FILE = os.path.join(DATA_DIR, "image_overrides.json")
 CUSTOM_IMAGES_DIR = os.path.join(DATA_DIR, "product_images")
 try:
     os.makedirs(CUSTOM_IMAGES_DIR, exist_ok=True)
@@ -177,6 +180,37 @@ def save_custom_products(products: List[Dict[str, Any]]) -> None:
         json.dump(products, f, indent=2, ensure_ascii=False)
 
 
+def load_image_overrides() -> Dict[str, str]:
+    if not os.path.exists(IMAGE_OVERRIDES_FILE):
+        return {}
+    try:
+        with open(IMAGE_OVERRIDES_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_image_overrides(overrides: Dict[str, str]) -> None:
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(IMAGE_OVERRIDES_FILE, "w", encoding="utf-8") as f:
+        json.dump(overrides, f, indent=2, ensure_ascii=False)
+
+
+def save_webp_product_image(raw: bytes, key: str) -> str:
+    """Save uploaded image bytes as an optimized WEBP on the volume.
+
+    Returns the stored reference ("product-images/<file>.webp"). Raises on a
+    file that PIL cannot open.
+    """
+    img = Image.open(BytesIO(raw)).convert("RGB")
+    safe = re.sub(r"[^A-Za-z0-9_-]", "_", key) or uuid.uuid4().hex
+    filename = f"{safe}.webp"
+    os.makedirs(CUSTOM_IMAGES_DIR, exist_ok=True)
+    img.save(os.path.join(CUSTOM_IMAGES_DIR, filename), "WEBP", quality=80, method=6)
+    return f"product-images/{filename}"
+
+
 def load_base_items_list() -> List[Dict[str, Any]]:
     if not os.path.exists(ITEMS_JSON):
         return []
@@ -196,12 +230,21 @@ def load_items_list() -> List[Dict[str, Any]]:
     """
     base = load_base_items_list()
     customs = load_custom_products()
-    if not customs:
-        return base
 
-    custom_ids = {norm(p.get("id")) for p in customs if norm(p.get("id"))}
-    merged = [it for it in base if norm(it.get("id")) not in custom_ids]
-    merged.extend(customs)
+    if customs:
+        custom_ids = {norm(p.get("id")) for p in customs if norm(p.get("id"))}
+        merged = [it for it in base if norm(it.get("id")) not in custom_ids]
+        merged.extend(customs)
+    else:
+        merged = base
+
+    # Apply image overrides for existing SKUs (attach/replace image only).
+    overrides = load_image_overrides()
+    if overrides:
+        for it in merged:
+            ov = overrides.get(norm(it.get("id")))
+            if ov:
+                it["image"] = ov
     return merged
 
 
@@ -1945,12 +1988,7 @@ async def add_custom_product(
     if image is not None and (image.filename or "").strip():
         try:
             raw = await image.read()
-            img = Image.open(BytesIO(raw)).convert("RGB")
-            safe = re.sub(r"[^A-Za-z0-9_-]", "_", sku) or uuid.uuid4().hex
-            filename = f"{safe}.webp"
-            os.makedirs(CUSTOM_IMAGES_DIR, exist_ok=True)
-            img.save(os.path.join(CUSTOM_IMAGES_DIR, filename), "WEBP", quality=80, method=6)
-            image_field = f"product-images/{filename}"
+            image_field = save_webp_product_image(raw, sku)
         except Exception:
             raise HTTPException(status_code=400, detail="Could not read that image file. Use a JPG, PNG, or WEBP.")
 
@@ -2001,6 +2039,74 @@ def delete_custom_product(sku: str, request: Request):
                 pass
 
     save_custom_products(remaining)
+    return {"ok": True}
+
+
+@app.get("/admin/image-overrides")
+def list_image_overrides(request: Request):
+    require_password(request)
+    overrides = load_image_overrides()
+    items_map = load_items_map()
+    out = []
+    for sku, image in overrides.items():
+        it = items_map.get(norm(sku)) or {}
+        out.append({
+            "id": norm(sku),
+            "name": norm(it.get("name")),
+            "image": norm(image),
+        })
+    out.sort(key=lambda r: r["name"].lower())
+    return {"overrides": out}
+
+
+@app.post("/admin/products/image")
+async def set_product_image(
+    request: Request,
+    id: str = Form(...),
+    image: UploadFile = File(...),
+):
+    """Attach or replace the image on an EXISTING catalog SKU (base or custom)."""
+    require_password(request)
+
+    sku = norm(id)
+    if not sku:
+        raise HTTPException(status_code=400, detail="A SKU is required.")
+    if sku not in load_items_map():
+        raise HTTPException(status_code=404, detail=f"No product found with SKU '{sku}'.")
+    if not (image and (image.filename or "").strip()):
+        raise HTTPException(status_code=400, detail="Please choose an image file.")
+
+    try:
+        raw = await image.read()
+        # Prefix the key so an override never collides with a custom product's
+        # own image file (which is keyed on the bare SKU).
+        image_field = save_webp_product_image(raw, f"ovr-{sku}")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Could not read that image file. Use a JPG, PNG, or WEBP.")
+
+    overrides = load_image_overrides()
+    overrides[sku] = image_field
+    save_image_overrides(overrides)
+
+    it = load_items_map().get(sku) or {}
+    return {"ok": True, "id": sku, "name": norm(it.get("name")), "image": image_field}
+
+
+@app.delete("/admin/image-overrides/{sku}")
+def delete_image_override(sku: str, request: Request):
+    require_password(request)
+    target = norm(sku)
+    overrides = load_image_overrides()
+    if target not in overrides:
+        raise HTTPException(status_code=404, detail="No image override for that SKU.")
+
+    img = norm(overrides.pop(target)).lstrip("/")
+    if img.startswith("product-images/"):
+        try:
+            os.remove(os.path.join(CUSTOM_IMAGES_DIR, os.path.basename(img)))
+        except Exception:
+            pass
+    save_image_overrides(overrides)
     return {"ok": True}
 
 

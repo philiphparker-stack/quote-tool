@@ -112,6 +112,36 @@
       <tbody id="list"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
     </table>
   </div>
+
+  <div class="card">
+    <h2>Add / replace an image on an existing product</h2>
+    <div class="hint" style="margin-bottom:6px">For a SKU already in the built-in catalog — this only attaches a photo, nothing else about the product changes.</div>
+    <form id="imgForm">
+      <label>Find the product *</label>
+      <input type="text" id="imgSku" list="skuList" required placeholder="Type a product name or SKU…" autocomplete="off" />
+      <datalist id="skuList"></datalist>
+      <div class="hint">Pick from the list so the SKU matches exactly.</div>
+
+      <label>Image *</label>
+      <div class="filedrop" id="imgDrop">
+        <span id="imgFileLabel">Click to choose a JPG / PNG / WEBP</span>
+        <input type="file" id="imgFile" accept="image/*" style="display:none" />
+        <div id="imgPreview"></div>
+      </div>
+
+      <button class="primary" id="imgBtn" type="submit">Save image to product</button>
+      <div class="msg" id="imgMsg"></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Image updates you've made</h2>
+    <div class="hint" style="margin-bottom:10px">Photos attached to existing catalog SKUs. Delete to revert a product to its original image.</div>
+    <table>
+      <thead><tr><th></th><th>Name</th><th>SKU</th><th></th></tr></thead>
+      <tbody id="ovrList"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
 </div>
 
 <div id="auth">
@@ -229,6 +259,94 @@ $("form").addEventListener("submit", async (e)=>{
   }
 });
 
+// ---- image-on-existing-SKU: picker ----
+$("imgDrop").addEventListener("click", ()=> $("imgFile").click());
+$("imgFile").addEventListener("change", ()=>{
+  const f = $("imgFile").files[0];
+  if(!f){ $("imgPreview").innerHTML=""; $("imgFileLabel").textContent="Click to choose a JPG / PNG / WEBP"; return; }
+  $("imgFileLabel").textContent = f.name;
+  const r = new FileReader();
+  r.onload = e => $("imgPreview").innerHTML = `<img src="${e.target.result}" alt="preview"/>`;
+  r.readAsDataURL(f);
+});
+
+// ---- load full catalog into the SKU picker ----
+let skuIndex = {};   // "Name  ·  SKU" -> SKU, and SKU -> SKU
+async function loadSkuList(){
+  try{
+    const res = await api("/items?limit=2000");
+    const d = await res.json();
+    const items = d.items || [];
+    skuIndex = {};
+    const opts = items.map(it=>{
+      const label = `${it.name}  ·  ${it.id}`;
+      skuIndex[label] = it.id;
+      skuIndex[it.id] = it.id;
+      return `<option value="${esc(label)}"></option>`;
+    });
+    $("skuList").innerHTML = opts.join("");
+  }catch(e){}
+}
+
+// ---- list image overrides ----
+async function loadOverrides(){
+  try{
+    const res = await api("/admin/image-overrides");
+    const d = await res.json();
+    const rows = d.overrides||[];
+    if(!rows.length){ $("ovrList").innerHTML = `<tr><td colspan="4" class="empty">None yet.</td></tr>`; return; }
+    $("ovrList").innerHTML = rows.map(p=>{
+      const img = p.image ? (p.image.startsWith("product-images/") ? "/"+p.image : p.image) : "assets/items/comingsoon.png";
+      return `<tr>
+        <td><img src="${img}" onerror="this.src='assets/items/comingsoon.png'"/></td>
+        <td>${esc(p.name||"(unknown SKU)")}</td>
+        <td style="font-family:monospace;font-size:12px">${esc(p.id)}</td>
+        <td><button class="del ovrdel" data-sku="${esc(p.id)}">Delete</button></td>
+      </tr>`;
+    }).join("");
+    document.querySelectorAll(".ovrdel").forEach(b=>b.addEventListener("click", ()=>delOverride(b.dataset.sku)));
+  }catch(e){}
+}
+
+async function delOverride(sku){
+  if(!confirm(`Remove the custom image for "${sku}" (revert to original)?`)) return;
+  try{
+    await api("/admin/image-overrides/"+encodeURIComponent(sku), { method:"DELETE" });
+    await loadOverrides();
+  }catch(e){}
+}
+
+// ---- image-on-existing-SKU: submit ----
+$("imgForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const msg = $("imgMsg"); msg.textContent=""; msg.className="msg";
+  const raw = $("imgSku").value.trim();
+  const sku = skuIndex[raw] || raw;   // resolve picked label -> SKU, else use as-is
+  if(!sku){ msg.textContent="Choose a product first."; msg.className="msg err"; return; }
+  if(!$("imgFile").files[0]){ msg.textContent="Choose an image file."; msg.className="msg err"; return; }
+  const fd = new FormData();
+  fd.append("id", sku);
+  fd.append("image", $("imgFile").files[0]);
+
+  $("imgBtn").disabled=true; $("imgBtn").textContent="Saving…";
+  try{
+    const res = await api("/admin/products/image", { method:"POST", body: fd });
+    if(!res.ok){
+      const err = await res.json().catch(()=>({detail:"Save failed."}));
+      msg.textContent = err.detail || "Save failed."; msg.className="msg err";
+    }else{
+      const d = await res.json();
+      msg.textContent = `Image saved to "${d.name || d.id}" ✓`; msg.className="msg ok";
+      $("imgForm").reset(); $("imgPreview").innerHTML=""; $("imgFileLabel").textContent="Click to choose a JPG / PNG / WEBP";
+      await loadOverrides();
+    }
+  }catch(e){
+    if(e.message!=="unauth"){ msg.textContent="Network error."; msg.className="msg err"; }
+  }finally{
+    $("imgBtn").disabled=false; $("imgBtn").textContent="Save image to product";
+  }
+});
+
 // ---- boot ----
 async function boot(){
   if(!getPw()){ showAuth(); return; }
@@ -239,6 +357,8 @@ async function boot(){
     hideAuth();
     await loadFilters();
     await loadList();
+    await loadSkuList();
+    await loadOverrides();
   }catch(e){ showAuth(); }
 }
 boot();
