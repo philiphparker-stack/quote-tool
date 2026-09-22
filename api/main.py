@@ -67,6 +67,9 @@ CUSTOM_PRODUCTS_FILE = os.path.join(DATA_DIR, "custom_products.json")
 # Image overrides attach/replace an image on an EXISTING catalog SKU without
 # duplicating the whole product: { "<sku>": "product-images/<file>.webp" }.
 IMAGE_OVERRIDES_FILE = os.path.join(DATA_DIR, "image_overrides.json")
+# Discontinued SKUs: kept in the catalog but flagged in the generator so staff
+# are warned yet can still add them. Stored as a list of SKUs.
+DISCONTINUED_FILE = os.path.join(DATA_DIR, "discontinued.json")
 CUSTOM_IMAGES_DIR = os.path.join(DATA_DIR, "product_images")
 try:
     os.makedirs(CUSTOM_IMAGES_DIR, exist_ok=True)
@@ -197,6 +200,23 @@ def save_image_overrides(overrides: Dict[str, str]) -> None:
         json.dump(overrides, f, indent=2, ensure_ascii=False)
 
 
+def load_discontinued() -> set:
+    if not os.path.exists(DISCONTINUED_FILE):
+        return set()
+    try:
+        with open(DISCONTINUED_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return {norm(s) for s in data} if isinstance(data, list) else set()
+    except Exception:
+        return set()
+
+
+def save_discontinued(skus) -> None:
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(DISCONTINUED_FILE, "w", encoding="utf-8") as f:
+        json.dump(sorted(skus), f, indent=2, ensure_ascii=False)
+
+
 def save_webp_product_image(raw: bytes, key: str) -> str:
     """Save uploaded image bytes as an optimized WEBP on the volume.
 
@@ -240,11 +260,14 @@ def load_items_list() -> List[Dict[str, Any]]:
 
     # Apply image overrides for existing SKUs (attach/replace image only).
     overrides = load_image_overrides()
-    if overrides:
-        for it in merged:
-            ov = overrides.get(norm(it.get("id")))
+    discontinued = load_discontinued()
+    for it in merged:
+        sku = norm(it.get("id"))
+        if overrides:
+            ov = overrides.get(sku)
             if ov:
                 it["image"] = ov
+        it["discontinued"] = sku in discontinued
     return merged
 
 
@@ -377,6 +400,7 @@ def filter_items(
             "search_terms": norm(it.get("search_terms")),
             "has_variants": bool(it.get("has_variants")),
             "variants": it.get("variants") if isinstance(it.get("variants"), list) else [],
+            "discontinued": bool(it.get("discontinued")),
         })
 
         if len(out) >= limit:
@@ -2107,6 +2131,52 @@ def delete_image_override(sku: str, request: Request):
         except Exception:
             pass
     save_image_overrides(overrides)
+    return {"ok": True}
+
+
+@app.get("/admin/discontinued")
+def list_discontinued(request: Request):
+    require_password(request)
+    skus = load_discontinued()
+    items_map = load_items_map()
+    out = []
+    for sku in skus:
+        it = items_map.get(norm(sku)) or {}
+        out.append({
+            "id": norm(sku),
+            "name": norm(it.get("name")),
+            "manufacturer": norm(it.get("manufacturer")),
+            "image": norm(it.get("image")),
+        })
+    out.sort(key=lambda r: r["name"].lower())
+    return {"discontinued": out}
+
+
+@app.post("/admin/discontinued")
+def mark_discontinued(request: Request, id: str = Form(...)):
+    """Flag an existing catalog SKU as discontinued (kept, but warned in the app)."""
+    require_password(request)
+    sku = norm(id)
+    if not sku:
+        raise HTTPException(status_code=400, detail="A SKU is required.")
+    if sku not in load_items_map():
+        raise HTTPException(status_code=404, detail=f"No product found with SKU '{sku}'.")
+    skus = load_discontinued()
+    skus.add(sku)
+    save_discontinued(skus)
+    it = load_items_map().get(sku) or {}
+    return {"ok": True, "id": sku, "name": norm(it.get("name"))}
+
+
+@app.delete("/admin/discontinued/{sku}")
+def restore_discontinued(sku: str, request: Request):
+    require_password(request)
+    target = norm(sku)
+    skus = load_discontinued()
+    if target not in skus:
+        raise HTTPException(status_code=404, detail="That SKU is not marked discontinued.")
+    skus.discard(target)
+    save_discontinued(skus)
     return {"ok": True}
 
 

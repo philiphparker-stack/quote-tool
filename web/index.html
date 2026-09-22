@@ -415,6 +415,29 @@
       box-shadow:0 0 0 1px #cfe4ff inset, 0 10px 22px rgba(16,24,40,.07);
     }
 
+    .itemCard.discontinued{
+      border-color:#e6b8b3;
+      background:#fdf7f6;
+    }
+    .discBadge{
+      display:inline-block;
+      background:#c0392b;
+      color:#fff;
+      font-size:9.5px;
+      font-weight:700;
+      letter-spacing:.4px;
+      padding:1px 6px;
+      border-radius:6px;
+      vertical-align:middle;
+      margin-left:6px;
+    }
+    .discNote{
+      color:#c0392b;
+      font-size:11px;
+      font-weight:600;
+      margin-top:2px;
+    }
+
     .checkWrap{
       padding-top:2px;
     }
@@ -1796,7 +1819,7 @@
       const cfg = ensurePriceConfig(item);
 
       return `
-          <div class="itemCard ${checked ? "selected" : ""}" data-item-id="${escapeHtml(item.id)}">
+          <div class="itemCard ${checked ? "selected" : ""} ${item.discontinued ? "discontinued" : ""}" data-item-id="${escapeHtml(item.id)}">
             <div class="checkWrap">
               <input type="checkbox" class="itemCheck" data-id="${escapeHtml(item.id)}" ${checked ? "checked" : ""}/>
             </div>
@@ -1813,7 +1836,8 @@
             </div>
 
             <div class="itemBody">
-              <div class="itemName">${escapeHtml(item.name)}</div>
+              <div class="itemName">${escapeHtml(item.name)}${item.discontinued ? ' <span class="discBadge">DISCONTINUED</span>' : ""}</div>
+              ${item.discontinued ? '<div class="discNote">Discontinued — you can still add it.</div>' : ""}
               <div class="itemMeta">${escapeHtml(item.manufacturer || "")}</div>
               <div class="itemMeta">${escapeHtml(item.id || "")}</div>
               <div class="itemMeta">${escapeHtml(item.category || "")}</div>
