@@ -2196,11 +2196,17 @@ def serve_product_image(filename: str):
 app.mount("/assets", StaticFiles(directory=os.path.join(WEB_ROOT, "assets")), name="assets")
 
 
+# The HTML shells carry all inline JS/CSS, so tell browsers not to cache them.
+# This makes deploys show up immediately without a hard refresh. Images and
+# other assets under /assets keep normal caching.
+_NO_CACHE = {"Cache-Control": "no-cache, no-store, must-revalidate"}
+
+
 @app.get("/")
 def serve_frontend():
-    return FileResponse(os.path.join(WEB_ROOT, "index.html"))
+    return FileResponse(os.path.join(WEB_ROOT, "index.html"), headers=_NO_CACHE)
 
 
 @app.get("/admin")
 def serve_admin():
-    return FileResponse(os.path.join(WEB_ROOT, "admin.html"))
+    return FileResponse(os.path.join(WEB_ROOT, "admin.html"), headers=_NO_CACHE)
